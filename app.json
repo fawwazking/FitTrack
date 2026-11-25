@@ -33,7 +33,8 @@
           "color": "#22C55E"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": false

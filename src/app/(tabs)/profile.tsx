@@ -24,7 +24,8 @@ import {
   updateGoalAndTarget,
   updateProfile,
 } from '../../db/repos/profile';
-import { getSettings, resetApplication, updateSettings } from '../../db/repos/settings';
+import { getSettings, listReminders, resetApplication, updateReminder, updateSettings } from '../../db/repos/settings';
+import { exportBackup, importBackup } from '../../db/backup';
 import {
   bmi,
   isBulkingDiscouragedByBmi,
@@ -443,6 +444,107 @@ export default function ProfileScreen() {
         </Card>
       </Section>
 
+      <Section title={t.settings.reminders}>
+        <Card>
+          {(() => {
+            const reminders = listReminders();
+            const mealReminders = reminders.filter((r) => r.type === 'meal');
+            const workoutReminders = reminders.filter((r) => r.type === 'workout');
+            const weighReminders = reminders.filter((r) => r.type === 'weigh_in');
+
+            const toggleReminder = (id: string, enabled: boolean) => {
+              updateReminder(id, { enabled: enabled ? 1 : 0 });
+              bump();
+            };
+
+            return (
+              <View style={{ gap: theme.spacing.md }}>
+                <Row>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Txt variant="small" weight="600">
+                      {t.settings.mealReminders}
+                    </Txt>
+                    {mealReminders.map((r) => (
+                      <Row key={r.id} gap={4}>
+                        <Txt variant="caption" color={theme.colors.textMuted}>
+                          {r.time}
+                          {r.mealType ? ` · ${t.meal[r.mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack']}` : ''}
+                        </Txt>
+                        <Chip
+                          label={r.enabled ? 'ON' : 'OFF'}
+                          selected={r.enabled === 1}
+                          onPress={() => toggleReminder(r.id, r.enabled !== 1)}
+                        />
+                      </Row>
+                    ))}
+                  </View>
+                </Row>
+
+                <Divider />
+
+                <Row>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Txt variant="small" weight="600">
+                      {t.settings.workoutReminders}
+                    </Txt>
+                    {workoutReminders.length === 0 ? (
+                      <Txt variant="caption" color={theme.colors.textMuted}>
+                        —
+                      </Txt>
+                    ) : (
+                      workoutReminders.map((r) => (
+                        <Row key={r.id} gap={4}>
+                          <Txt variant="caption" color={theme.colors.textMuted}>
+                            {r.time} · {r.daysOfWeek}
+                          </Txt>
+                          <Chip
+                            label={r.enabled ? 'ON' : 'OFF'}
+                            selected={r.enabled === 1}
+                            onPress={() => toggleReminder(r.id, r.enabled !== 1)}
+                          />
+                        </Row>
+                      ))
+                    )}
+                  </View>
+                </Row>
+
+                <Divider />
+
+                <Row>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Txt variant="small" weight="600">
+                      {t.settings.weighInReminders}
+                    </Txt>
+                    {weighReminders.length === 0 ? (
+                      <Txt variant="caption" color={theme.colors.textMuted}>
+                        —
+                      </Txt>
+                    ) : (
+                      weighReminders.map((r) => (
+                        <Row key={r.id} gap={4}>
+                          <Txt variant="caption" color={theme.colors.textMuted}>
+                            {r.time} · {r.daysOfWeek}
+                          </Txt>
+                          <Chip
+                            label={r.enabled ? 'ON' : 'OFF'}
+                            selected={r.enabled === 1}
+                            onPress={() => toggleReminder(r.id, r.enabled !== 1)}
+                          />
+                        </Row>
+                      ))
+                    )}
+                  </View>
+                </Row>
+
+                <Txt variant="caption" color={theme.colors.textMuted}>
+                  {t.settings.reminderNote}
+                </Txt>
+              </View>
+            );
+          })()}
+        </Card>
+      </Section>
+
       <Section title={t.settings.theme}>
         <Row gap={8}>
           {THEME_MODES.map((mode) => (
@@ -460,6 +562,36 @@ export default function ProfileScreen() {
             />
           ))}
         </Row>
+      </Section>
+
+      <Section title={t.settings.backup}>
+        <Card>
+          <Row gap={8}>
+            <Button
+              title={t.settings.exportJson}
+              icon="download-outline"
+              small
+              variant="secondary"
+              onPress={async () => {
+                await exportBackup();
+                bump();
+              }}
+            />
+            <Button
+              title={t.settings.importJson}
+              icon="cloud-upload-outline"
+              small
+              variant="secondary"
+              onPress={async () => {
+                const result = await importBackup();
+                if (result !== null) bump();
+              }}
+            />
+          </Row>
+          <Txt variant="caption" color={theme.colors.textMuted}>
+            {t.settings.backupNote}
+          </Txt>
+        </Card>
       </Section>
 
       <Section title={t.profile.about}>

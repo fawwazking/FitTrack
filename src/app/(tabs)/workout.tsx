@@ -12,6 +12,7 @@ import {
   listSessions,
   setActiveProgram,
   startSession,
+  getWeeklyVolumeSummary,
 } from '../../db/repos/workout';
 import { getProfileBundle } from '../../db/repos/profile';
 import { todayISO } from '../../domain/dates';
@@ -281,6 +282,57 @@ export default function WorkoutScreen() {
             ))}
           </Card>
         )}
+      </Section>
+
+      <Section title={t.workout.weeklyVolume}>
+        {(() => {
+          const weekly = getWeeklyVolumeSummary(12);
+          if (weekly.length === 0) {
+            return <EmptyState icon="trending-up-outline" title={t.workout.noVolumeData} />;
+          }
+          const maxVol = Math.max(...weekly.map((w) => w.totalVolume), 1);
+          return (
+            <Card>
+              {weekly.map((w, i) => (
+                <View key={w.weekStart} style={{ gap: theme.spacing.sm }}>
+                  {i > 0 ? <Divider /> : null}
+                  <Row>
+                    <View style={{ flex: 1 }}>
+                      <Txt variant="small" weight="600">
+                        {formatDate(w.weekStart)}
+                      </Txt>
+                      <Txt variant="caption" color={theme.colors.textMuted}>
+                        {w.sessions} {t.workout.sessionsShort}
+                        {w.avgE1rm ? ` · e1RM ${formatNumber(w.avgE1rm)} kg` : ''}
+                      </Txt>
+                    </View>
+                    <Txt variant="small" weight="600">
+                      {formatNumber(w.totalVolume)} kg
+                    </Txt>
+                  </Row>
+                  {/* Simple bar chart */}
+                  <View
+                    style={{
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: theme.colors.surfaceAlt,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <View
+                      style={{
+                        height: '100%',
+                        width: `${(w.totalVolume / maxVol) * 100}%`,
+                        borderRadius: 3,
+                        backgroundColor: theme.colors.primary,
+                      }}
+                    />
+                  </View>
+                </View>
+              ))}
+            </Card>
+          );
+        })()}
       </Section>
     </Screen>
   );

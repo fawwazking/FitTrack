@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import type { PrType, ProgressionPlan, WorkSetInput } from '../../domain/types';
-import { diffDaysISO, todayISO, weekdayIndex } from '../../domain/dates';
+import { addDaysISO, diffDaysISO, todayISO, weekdayIndex } from '../../domain/dates';
 import {
   detectSetPrs,
   epley1Rm,
@@ -1012,7 +1012,7 @@ export function deleteSession(sessionId: string): void {
 }
 
 export function getExerciseStats(exerciseId: string): ExerciseStat[] {
-  return getPastExerciseSessions(exerciseId, 100).map((past) => {
+  const stats = getPastExerciseSessions(exerciseId, 100).map((past) => {
     const sets = workSets(past.sets.map(toWorkSet));
     const top = sets.reduce<WorkSetInput | null>(
       (best, set) =>
@@ -1034,4 +1034,69 @@ export function getExerciseStats(exerciseId: string): ExerciseStat[] {
       totalReps: sets.reduce((sum, set) => sum + set.reps, 0),
     };
   });
+  return stats;
+}
+
+/**
+ * Weekly volume summary for the last N weeks.
+ * Returns array of { weekStart, totalVolume, sessions, avgE1rm } for chart rendering.
+ */
+export function getWeeklyVolumeSummary(weeks = 12): {
+  weekStart: string;
+  totalVolume: number;
+  sessions: number;
+  avgE1rm: number | null;
+}[] {
+  if (isWeb) return [];
+  const db = getDb();
+  const today = todayISO();
+  const results: { weekStart: string; totalVolume: number; sessions: number; avgE1rm: number | null }[] = [];
+
+  for (let i = weeks - 1; i >= 0; i--) {
+    const weekStart = addDaysISO(today, -(i * 7 + 6)); // Monday of that week
+    const weekEnd = addDaysISO(weekStart, 6);
+
+    const sessions = db
+      .select()
+      .from(workoutSession)
+      .where(
+        and(
+          isNull(workoutSession.deletedAt),
+          gte(workoutSession.date, weekStart),
+          lte(workoutSession.date, weekEnd),
+        ),
+      )
+      .all();
+
+    if (sessions.length === 0) continue;
+
+    let totalVolume = 0;
+    const e1rms: number[] = [];
+
+    for (const session of sessions) {
+      const exs = db.select().from(sessionExercise).where(eq(sessionExercise.sessionId, session.id)).all();
+      for (const ex of exs) {
+        const sets = db
+          .select()
+          .from(setLog)
+          .where(and(eq(setLog.sessionExerciseId, ex.id), isNull(setLog.deletedAt)))
+          .all();
+        const work = sets.filter((s) => !s.isWarmup);
+        totalVolume += work.reduce((sum, s) => sum + s.weightKg * s.reps, 0);
+        for (const s of work) {
+          const e = epley1Rm(s.weightKg, s.reps);
+          if (e !== null) e1rms.push(e);
+        }
+      }
+    }
+
+    results.push({
+      weekStart,
+      totalVolume: Math.round(totalVolume),
+      sessions: sessions.length,
+      avgE1rm: e1rms.length ? Math.round(e1rms.reduce((a, b) => a + b, 0) / e1rms.length) : null,
+    });
+  }
+
+  return results;
 }

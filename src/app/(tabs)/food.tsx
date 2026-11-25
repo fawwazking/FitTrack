@@ -10,7 +10,7 @@ import {
   sumEntries,
 } from '../../db/repos/food';
 import { getProfileBundle } from '../../db/repos/profile';
-import { addDaysISO, todayISO } from '../../domain/dates';
+import { addDaysISO, startOfWeekISO, todayISO } from '../../domain/dates';
 import { formatDate, formatKcal, formatNumber, formatWeekday, t } from '../../i18n';
 import { useUi } from '../../state/ui';
 import {
@@ -18,19 +18,17 @@ import {
   Badge,
   Banner,
   Button,
-  CalorieRing,
   Card,
+  Chip,
   Divider,
   EmptyState,
   Header,
   IconButton,
   LoadingView,
-  MacroBar,
   Row,
   Screen,
   Section,
   Txt,
-  colorForMacro,
 } from '../../ui/components';
 import { useTheme } from '../../ui/theme';
 import { useQuery } from '../../ui/useQuery';
@@ -40,6 +38,7 @@ export default function FoodScreen() {
   const bump = useUi((state) => state.bump);
   const [date, setDate] = useState(todayISO());
   const [copyOpen, setCopyOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
 
   const day = useQuery(() => {
     const groups = groupMeals(date);
@@ -58,6 +57,16 @@ export default function FoodScreen() {
           )
         : [],
     [copyOpen, date],
+  );
+
+  // Weekly view: 7 days from start of week
+  const weekStart = startOfWeekISO(date);
+  const weekData = useQuery(
+    () =>
+      viewMode === 'week'
+        ? getRangeDayTotals(weekStart, addDaysISO(weekStart, 6)).filter((row) => row.totals.entryCount > 0)
+        : [],
+    [viewMode, weekStart],
   );
 
   if (day.loading && !day.data) return <LoadingView />;
@@ -108,133 +117,181 @@ export default function FoodScreen() {
         }
       />
 
-      <Row gap={8}>
-        <IconButton
-          name="chevron-back"
-          label={t.common.yesterday}
-          onPress={() => setDate(addDaysISO(date, -1))}
-        />
-        <Txt variant="h3" style={{ flex: 1, textAlign: 'center' }}>
-          {formatWeekday(date)}
-        </Txt>
-        <IconButton
-          name="chevron-forward"
-          label={t.common.tomorrow}
-          onPress={() => setDate(addDaysISO(date, 1))}
-        />
-        {date === todayISO() ? null : (
-          <Button
-            title={t.common.today}
-            small
-            fullWidth={false}
-            variant="secondary"
-            onPress={() => setDate(todayISO())}
+      {viewMode === 'day' ? (
+        <Row gap={8}>
+          <IconButton
+            name="chevron-back"
+            label={t.common.yesterday}
+            onPress={() => setDate(addDaysISO(date, -1))}
           />
-        )}
+          <Txt variant="h3" style={{ flex: 1, textAlign: 'center' }}>
+            {formatWeekday(date)}
+          </Txt>
+          <IconButton
+            name="chevron-forward"
+            label={t.common.tomorrow}
+            onPress={() => setDate(addDaysISO(date, 1))}
+          />
+          {date === todayISO() ? null : (
+            <Button
+              title={t.common.today}
+              small
+              fullWidth={false}
+              variant="secondary"
+              onPress={() => setDate(todayISO())}
+            />
+          )}
+        </Row>
+      ) : (
+        <Row gap={8} style={{ alignItems: 'center' }}>
+          <IconButton
+            name="chevron-back"
+            label={t.common.yesterday}
+            onPress={() => setDate(addDaysISO(date, -7))}
+          />
+          <Txt variant="h3" style={{ flex: 1, textAlign: 'center' }}>
+            {t.food.weekView}
+          </Txt>
+          <IconButton
+            name="chevron-forward"
+            label={t.common.tomorrow}
+            onPress={() => setDate(addDaysISO(date, 7))}
+          />
+          {weekStart === startOfWeekISO(todayISO()) ? null : (
+            <Button
+              title={t.common.today}
+              small
+              fullWidth={false}
+              variant="secondary"
+              onPress={() => setDate(todayISO())}
+            />
+          )}
+        </Row>
+      )}
+
+      {/* View mode toggle */}
+      <Row gap={8}>
+        <Chip
+          label={t.food.dayView}
+          selected={viewMode === 'day'}
+          onPress={() => setViewMode('day')}
+        />
+        <Chip
+          label={t.food.weekView}
+          selected={viewMode === 'week'}
+          onPress={() => setViewMode('week')}
+        />
       </Row>
 
-      <Card style={{ alignItems: 'center', gap: theme.spacing.md }}>
-        {target ? (
-          <>
-            <CalorieRing consumed={totals.kcal} target={target.calories} />
-            <View style={{ alignSelf: 'stretch', gap: theme.spacing.md }}>
-              <MacroBar
-                label={t.nutrition.protein}
-                consumed={totals.proteinG}
-                target={target.proteinG}
-                color={colorForMacro(theme, 'protein')}
-              />
-              <MacroBar
-                label={t.nutrition.carbs}
-                consumed={totals.carbsG}
-                target={target.carbsG}
-                color={colorForMacro(theme, 'carbs')}
-              />
-              <MacroBar
-                label={t.nutrition.fat}
-                consumed={totals.fatG}
-                target={target.fatG}
-                color={colorForMacro(theme, 'fat')}
-              />
-            </View>
-          </>
-        ) : (
-          <Banner tone="warning" title={t.common.noData}>
-            {t.nutrition.estimateNote}
-          </Banner>
-        )}
-      </Card>
-
-      {totals.entryCount === 0 ? (
-        <EmptyState
-          icon="restaurant-outline"
-          title={t.food.emptyDay}
-          action={
-            <Row gap={8}>
-              {groups.slice(0, 2).map((group) => (
-                <Button
-                  key={group.mealType}
-                  title={t.meal[group.mealType]}
-                  small
-                  fullWidth={false}
-                  variant="secondary"
-                  onPress={() => openAdd(group.mealType)}
-                />
-              ))}
-            </Row>
-          }
-        />
-      ) : null}
-
-      <Section title={t.food.title}>
-        {groups.map((group) => (
-          <Card key={group.mealType}>
-            <Row>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Txt variant="h3">{t.meal[group.mealType]}</Txt>
-                <Txt variant="caption" color={theme.colors.textMuted}>
-                  {formatKcal(group.totals.kcal)} · {group.entries.length} {t.food.entries}
-                </Txt>
-              </View>
-              <Button
-                title={t.common.add}
-                icon="add"
-                small
-                fullWidth={false}
-                onPress={() => openAdd(group.mealType)}
-              />
-            </Row>
-            {group.entries.length === 0 ? (
-              <Txt variant="caption" color={theme.colors.textMuted}>
-                {t.food.emptyMeal}
-              </Txt>
+      {viewMode === 'week' ? (
+        <Section title={t.food.weeklyHistory}>
+          <Card>
+            {(weekData.data ?? []).length === 0 ? (
+              <EmptyState icon="calendar-outline" title={t.common.noData} body={t.food.emptyDay} />
             ) : (
-              group.entries.map((entry, index) => (
-                <View key={entry.id} style={{ gap: theme.spacing.sm }}>
+              (weekData.data ?? []).map((row, index) => (
+                <View key={row.date} style={{ gap: theme.spacing.sm }}>
                   {index > 0 ? <Divider /> : null}
                   <Row>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Txt variant="small" weight="600" numberOfLines={1}>
-                        {entry.nameSnapshot}
+                    <View style={{ flex: 1 }}>
+                      <Txt variant="small" weight="600">
+                        {formatDate(row.date)}
                       </Txt>
                       <Txt variant="caption" color={theme.colors.textMuted}>
-                        {formatNumber(entry.grams)} {t.units.g} · {formatKcal(entry.kcal)}
+                        {row.totals.entryCount} {t.food.entries}
                       </Txt>
                     </View>
-                    <Badge label={`P ${formatNumber(entry.proteinG)}`} />
-                    <IconButton
-                      name="trash-outline"
-                      label={`${t.common.delete} ${entry.nameSnapshot}`}
-                      size={20}
-                      onPress={() => removeEntry(entry.id)}
-                    />
+                    <Row gap={6}>
+                      <Badge label={formatKcal(row.totals.kcal)} />
+                      <Badge label={`P ${formatNumber(row.totals.proteinG)}`} />
+                    </Row>
                   </Row>
+                  {target ? (
+                    <Txt variant="caption" color={row.totals.kcal > target.calories ? theme.colors.danger : theme.colors.textMuted}>
+                      {row.totals.kcal > target.calories
+                        ? `${formatKcal(row.totals.kcal - target.calories)} ${t.common.over}`
+                        : `${formatKcal(target.calories - row.totals.kcal)} ${t.common.remaining}`}
+                    </Txt>
+                  ) : null}
                 </View>
               ))
             )}
           </Card>
-        ))}
-      </Section>
+        </Section>
+      ) : (
+        <>
+          {totals.entryCount === 0 ? (
+            <EmptyState
+              icon="restaurant-outline"
+              title={t.food.emptyDay}
+              action={
+                <Row gap={8}>
+                  {groups.slice(0, 2).map((group) => (
+                    <Button
+                      key={group.mealType}
+                      title={t.meal[group.mealType]}
+                      small
+                      fullWidth={false}
+                      variant="secondary"
+                      onPress={() => openAdd(group.mealType)}
+                    />
+                  ))}
+                </Row>
+              }
+            />
+          ) : null}
+
+          <Section title={t.food.title}>
+            {groups.map((group) => (
+              <Card key={group.mealType}>
+                <Row>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Txt variant="h3">{t.meal[group.mealType]}</Txt>
+                    <Txt variant="caption" color={theme.colors.textMuted}>
+                      {formatKcal(group.totals.kcal)} · {group.entries.length} {t.food.entries}
+                    </Txt>
+                  </View>
+                  <Button
+                    title={t.common.add}
+                    icon="add"
+                    small
+                    fullWidth={false}
+                    onPress={() => openAdd(group.mealType)}
+                  />
+                </Row>
+                {group.entries.length === 0 ? (
+                  <Txt variant="caption" color={theme.colors.textMuted}>
+                    {t.food.emptyMeal}
+                  </Txt>
+                ) : (
+                  group.entries.map((entry, index) => (
+                    <View key={entry.id} style={{ gap: theme.spacing.sm }}>
+                      {index > 0 ? <Divider /> : null}
+                      <Row>
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Txt variant="small" weight="600" numberOfLines={1}>
+                            {entry.nameSnapshot}
+                          </Txt>
+                          <Txt variant="caption" color={theme.colors.textMuted}>
+                            {formatNumber(entry.grams)} {t.units.g} · {formatKcal(entry.kcal)}
+                          </Txt>
+                        </View>
+                        <Badge label={`P ${formatNumber(entry.proteinG)}`} />
+                        <IconButton
+                          name="trash-outline"
+                          label={`${t.common.delete} ${entry.nameSnapshot}`}
+                          size={20}
+                          onPress={() => removeEntry(entry.id)}
+                        />
+                      </Row>
+                    </View>
+                  ))
+                )}
+              </Card>
+            ))}
+          </Section>
+        </>
+      )}
 
       <AppModal visible={copyOpen} title={t.food.copyDay} onClose={() => setCopyOpen(false)}>
         <Txt variant="small" color={theme.colors.textMuted}>

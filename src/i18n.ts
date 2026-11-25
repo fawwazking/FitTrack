@@ -215,6 +215,9 @@ export const t = {
     allFoods: 'Semua',
     customTab: 'Saya',
     quickPick: 'Pilih cepat',
+    dayView: 'Harian',
+    weekView: 'Mingguan',
+    weeklyHistory: 'Riwayat mingguan',
     createFood: 'Buat makanan baru',
     createRecipe: 'Buat dari resep',
     name: 'Nama makanan',
@@ -362,6 +365,9 @@ export const t = {
     repsShort: 'rep',
     warmupShort: 'pemanasan',
     finishSetError: 'Isi beban dan repetisi lebih dari 0.',
+    weeklyVolume: 'Volume mingguan',
+    noVolumeData: 'Belum ada data volume. Mulai mencatat sesi.',
+    sessionsShort: 'sesi',
   },
 
   progressionReasons: {
@@ -481,6 +487,7 @@ export const t = {
     exportJson: 'Ekspor data (JSON)',
     importJson: 'Impor data (JSON)',
     backupLater: 'Ekspor/impor tersedia di v1.1.',
+    backupNote: 'Data diekspor sebagai JSON. Impor menggantikan semua data.',
     resetApp: 'Hapus semua data',
     resetConfirm: 'Semua data profil, makanan, dan latihan akan dihapus permanen. Lanjutkan?',
     language: 'Bahasa',
