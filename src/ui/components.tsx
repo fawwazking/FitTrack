@@ -874,12 +874,16 @@ export function AppModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Tutup"
-          style={{ flex: 1 }}
-          onPress={onClose}
-        />
+        {isWeb ? (
+          <View style={{ flex: 1 }} onClick={onClose} />
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tutup"
+            style={{ flex: 1 }}
+            onPress={onClose}
+          />
+        )}
         <View
           style={{
             backgroundColor: theme.colors.surface,
