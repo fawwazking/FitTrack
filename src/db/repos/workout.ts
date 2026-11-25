@@ -1,3 +1,4 @@
+import { WORKOUT_DEFAULTS } from '../../config';
 import { and, asc, desc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import type { PrType, ProgressionPlan, WorkSetInput } from '../../domain/types';
 import { addDaysISO, diffDaysISO, todayISO, weekdayIndex } from '../../domain/dates';
@@ -9,7 +10,8 @@ import {
   sessionVolume,
   workSets,
 } from '../../domain/progression';
-import { defaultRestForExercise, defaultSetsForExercise, templateForFrequency } from '../../data/templates';
+import { SEED_EXERCISES } from '../../data/exercises';
+import { defaultRestForExercise, defaultSetsForExercise, templateForFrequency, type TemplateDefinition } from '../../data/templates';
 import { getDb, getSqlite, isWeb, newId, nowISO, normalizeSearch } from '../db';
 import {
   exercise,
@@ -149,9 +151,14 @@ export function createProgramFromTemplate(
   sessionsPerWeek: number,
   options: { name?: string; activate?: boolean } = {},
 ): string | null {
-  if (isWeb) return null;
   const template = templateForFrequency(sessionsPerWeek);
   if (template.days.length === 0) return null;
+  if (isWeb) {
+    const id = `web-program-${Date.now()}`;
+    saveWebProgram(id, template, options.name?.trim() || template.name, sessionsPerWeek);
+    if (options.activate !== false) setWebActiveProgram(id);
+    return id;
+  }
 
   const db = getDb();
   const now = nowISO();
@@ -239,7 +246,18 @@ export function getActiveProgramId(): string | null {
 }
 
 export function listPrograms(): WorkoutProgramRow[] {
-  if (isWeb) return [];
+  if (isWeb) {
+    return getWebPrograms().map((p) => ({
+      id: p.id,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      deletedAt: null,
+      name: p.name,
+      template: p.template,
+      sessionsPerWeek: p.sessionsPerWeek,
+      isActive: p.isActive ? 1 : 0,
+    }));
+  }
   return getDb()
     .select()
     .from(workoutProgram)
@@ -294,13 +312,20 @@ export function getProgramDetail(programId: string): ProgramDetail | null {
 }
 
 export function getActiveProgramDetail(): ProgramDetail | null {
-  if (isWeb) return null;
+  if (isWeb) {
+    const activeId = getWebActiveProgram();
+    if (!activeId) return null;
+    return getWebProgramDetail(activeId);
+  }
   const id = getActiveProgramId();
   return id ? getProgramDetail(id) : null;
 }
 
 export function setActiveProgram(programId: string): void {
-  if (isWeb) return;
+  if (isWeb) {
+    setWebActiveProgram(programId);
+    return;
+  }
   const now = nowISO();
   const db = getDb();
   db.update(workoutProgram).set({ isActive: 0, updatedAt: now }).where(eq(workoutProgram.isActive, 1)).run();
@@ -471,7 +496,13 @@ export function updateProgramDay(
 }
 
 export function getTodayProgramDay(date = todayISO()): { program: WorkoutProgramRow; day: ProgramDayRow } | null {
-  if (isWeb) return null;
+  if (isWeb) {
+    const detail = getActiveProgramDetail();
+    if (!detail) return null;
+    const target = weekdayIndex(date);
+    const day = detail.days.find((item) => item.row.weekday === target);
+    return day ? { program: detail.program, day: day.row } : null;
+  }
   const detail = getActiveProgramDetail();
   if (!detail) return null;
   const target = weekdayIndex(date);
@@ -1099,4 +1130,154 @@ export function getWeeklyVolumeSummary(weeks = 12): {
   }
 
   return results;
+}
+
+// ── Web program store (localStorage) ─────────────────────────────────────────
+
+const WEB_PROGRAMS_KEY = 'fittrack-web-programs';
+const WEB_ACTIVE_KEY = 'fittrack-web-active-program';
+
+interface WebProgramData {
+  id: string;
+  name: string;
+  template: string;
+  sessionsPerWeek: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  days: {
+    id: string;
+    name: string;
+    weekday: number;
+    orderIndex: number;
+    exercises: { id: string; exerciseId: string; name: string; targetSets: number; repMin: number; repMax: number; restSeconds: number; orderIndex: number }[];
+  }[];
+}
+
+function getWebPrograms(): WebProgramData[] {
+  try {
+    const raw = localStorage.getItem(WEB_PROGRAMS_KEY);
+    return raw ? (JSON.parse(raw) as WebProgramData[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveWebProgram(id: string, template: TemplateDefinition, name: string, sessionsPerWeek: number): void {
+  const programs = getWebPrograms();
+  const now = nowISO();
+  const exercisesById = new Map<string, (typeof SEED_EXERCISES)[number]>();
+  for (const ex of SEED_EXERCISES) {
+    exercisesById.set(ex.name, ex);
+  }
+
+  const webDays = template.days.map((day, idx) => ({
+    id: `web-day-${Date.now()}-${idx}`,
+    name: day.name,
+    weekday: day.weekday,
+    orderIndex: idx,
+    exercises: day.exercises.map((exName, exIdx) => {
+      const seed = exercisesById.get(exName);
+      const isCompound = seed?.isCompound ?? false;
+      return {
+        id: `web-pde-${Date.now()}-${idx}-${exIdx}`,
+        exerciseId: `web-ex-${exName}`,
+        name: exName,
+        targetSets: isCompound ? WORKOUT_DEFAULTS.compoundSets : WORKOUT_DEFAULTS.isolationSets,
+        repMin: isCompound ? WORKOUT_DEFAULTS.compoundRepMin : WORKOUT_DEFAULTS.isolationRepMin,
+        repMax: isCompound ? WORKOUT_DEFAULTS.compoundRepMax : WORKOUT_DEFAULTS.isolationRepMax,
+        restSeconds: isCompound ? WORKOUT_DEFAULTS.restCompoundSeconds : WORKOUT_DEFAULTS.restIsolationSeconds,
+        orderIndex: exIdx,
+      };
+    }),
+  }));
+
+  programs.push({
+    id,
+    name,
+    template: template.name,
+    sessionsPerWeek,
+    isActive: true,
+    createdAt: now,
+    updatedAt: now,
+    days: webDays,
+  });
+  localStorage.setItem(WEB_PROGRAMS_KEY, JSON.stringify(programs));
+}
+
+function getWebActiveProgram(): string | null {
+  return localStorage.getItem(WEB_ACTIVE_KEY);
+}
+
+function setWebActiveProgram(id: string): void {
+  const programs = getWebPrograms();
+  for (const p of programs) p.isActive = p.id === id;
+  localStorage.setItem(WEB_PROGRAMS_KEY, JSON.stringify(programs));
+  localStorage.setItem(WEB_ACTIVE_KEY, id);
+}
+
+function getWebProgramDetail(programId: string): ProgramDetail | null {
+  const programs = getWebPrograms();
+  const program = programs.find((p) => p.id === programId);
+  if (!program) return null;
+
+  const now = nowISO();
+  const programRow: WorkoutProgramRow = {
+    id: program.id,
+    createdAt: program.createdAt,
+    updatedAt: program.updatedAt,
+    deletedAt: null,
+    name: program.name,
+    template: program.template,
+    sessionsPerWeek: program.sessionsPerWeek,
+    isActive: program.isActive ? 1 : 0,
+  };
+
+  const days: ProgramDayDetail[] = program.days.map((day) => {
+    const dayRow: ProgramDayRow = {
+      id: day.id,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+      programId,
+      name: day.name,
+      orderIndex: day.orderIndex,
+      weekday: day.weekday,
+    };
+    const exercises: ProgramExerciseItem[] = day.exercises.map((ex) => {
+      const exerciseRow: ExerciseRow = {
+        id: ex.exerciseId,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+        name: ex.name,
+        nameEn: ex.name,
+        muscleGroup: '',
+        equipment: '',
+        defaultRepMin: ex.repMin,
+        defaultRepMax: ex.repMax,
+        incrementKg: 2.5,
+        isCustom: 0,
+        isCompound: ex.targetSets >= 3 ? 1 : 0,
+        searchText: ex.name.toLowerCase(),
+      };
+      const pdeRow: ProgramDayExerciseRow = {
+        id: ex.id,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+        programDayId: day.id,
+        exerciseId: ex.exerciseId,
+        orderIndex: ex.orderIndex,
+        targetSets: ex.targetSets,
+        repMin: ex.repMin,
+        repMax: ex.repMax,
+        restSeconds: ex.restSeconds,
+      };
+      return { row: pdeRow, exercise: exerciseRow };
+    });
+    return { row: dayRow, exercises };
+  });
+
+  return { program: programRow, days };
 }
