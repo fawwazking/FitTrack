@@ -3,7 +3,7 @@
  *
  * IMPORTANT: these values are approximate and flagged `verified: false`.
  * AGENTS.md forbids inventing nutrition data, so this is a starter set only;
- * replace it with TKPI/label data through scripts/import-foods.ts.
+ * replace it with TKPI/label data when an importer is built.
  */
 
 export interface SeedFood {

@@ -344,7 +344,7 @@ export function copyDay(fromDate: string, toDate: string, mealType?: MealType): 
   );
   if (entries.length === 0) return 0;
   const now = nowISO();
-  getDb().withTransactionSync(() => {
+  getSqlite().withTransactionSync(() => {
     for (const entry of entries) {
       getDb()
         .insert(mealEntry)

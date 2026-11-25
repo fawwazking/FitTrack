@@ -77,6 +77,13 @@ export const t = {
     later: 'Nanti',
   },
 
+  comingSoon: {
+    title: 'Segera hadir',
+    food: 'Pencatatan makanan menyusul di fase berikutnya.',
+    workout: 'Pencatatan sesi menyusul di fase berikutnya.',
+    progress: 'Grafik dan catatan berat menyusul di fase berikutnya.',
+  },
+
   units: {
     kcal: 'kkal',
     g: 'g',
@@ -347,6 +354,10 @@ export const t = {
     notEstimated: 'Tidak diestimasi (repetisi > 12)',
     addExerciseHint: 'Pilih dari daftar atau buat latihan baru.',
     setsShort: 'set',
+    weekShort: '/minggu',
+    setActive: 'Jadikan aktif',
+    repMinLabel: 'Reps min',
+    repMaxLabel: 'Reps max',
     repsShort: 'rep',
     warmupShort: 'pemanasan',
     finishSetError: 'Isi beban dan repetisi lebih dari 0.',

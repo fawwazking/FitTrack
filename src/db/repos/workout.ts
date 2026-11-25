@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
-import type { PrType } from '../../domain/types';
-import type { WorkSetInput } from '../../domain/types';
+import type { PrType, ProgressionPlan, WorkSetInput } from '../../domain/types';
 import { diffDaysISO, todayISO, weekdayIndex } from '../../domain/dates';
 import {
   detectSetPrs,
@@ -10,7 +9,6 @@ import {
   sessionVolume,
   workSets,
 } from '../../domain/progression';
-import type { ProgressionPlan } from '../../domain/types';
 import { defaultRestForExercise, defaultSetsForExercise, templateForFrequency } from '../../data/templates';
 import { getDb, getSqlite, newId, nowISO, normalizeSearch } from '../db';
 import {
@@ -634,11 +632,11 @@ export function getSessionDetail(sessionId: string): SessionDetail | null {
         if (!found) return null;
         const history = getPastExerciseSessions(found.id, 8);
         const last = history[0];
-        const lastSets = last ? workSets(last.sets).map(toWorkSet) : [];
+        const lastSets = last ? workSets(last.sets.map(toWorkSet)) : [];
         const daysSince = last ? diffDaysISO(last.date, todayISO()) : 0;
         let consecutiveBelowMin = 0;
         for (const past of history) {
-          if (workSets(past.sets).some((set) => set.reps < row.repMin)) consecutiveBelowMin += 1;
+          if (workSets(past.sets.map(toWorkSet)).some((set) => set.reps < row.repMin)) consecutiveBelowMin += 1;
           else break;
         }
         const e1rmStallSessions = countE1rmStalls(history);
@@ -676,7 +674,7 @@ function toWorkSet(set: SetLogRow): WorkSetInput {
 function countE1rmStalls(history: PastSession[]): number {
   const bests = history
     .map((past) => {
-      const values = workSets(past.sets)
+      const values = workSets(past.sets.map(toWorkSet))
         .map((set) => epley1Rm(set.weightKg, set.reps))
         .filter((value): value is number => value !== null);
       return values.length ? Math.max(...values) : null;
@@ -836,16 +834,6 @@ export function getSessionSummary(sessionId: string): SessionSummary | null {
     .from(sessionExercise)
     .where(and(eq(sessionExercise.sessionId, sessionId), isNull(sessionExercise.deletedAt)))
     .all();
-  const exerciseIds = [...new Set(rows.map((row) => row.exerciseId))];
-  const exercises = exerciseIds.length
-    ? db
-        .select()
-        .from(exercise)
-        .where(inArray(exercise.id, exerciseIds))
-        .all()
-    : [];
-  const nameById = new Map(exercises.map((row) => [row.id, row.name]));
-
   const sets = db
     .select()
     .from(setLog)
