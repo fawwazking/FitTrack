@@ -38,15 +38,16 @@ Diperbarui setiap akhir sesi:
 
 ## Langkah berikutnya
 
-Fase 1–5 selesai. Berikutnya (sesuai PRD v1.1 / keputusan ditunda):
-1. Migrasi kolom bernomor (`PRAGMA user_version`) sebelum rilis pertama.
-2. Impor data makanan resmi (TKPI/label) — seed ±184 item, di bawah target ±500.
-3. Modul evaluasi mingguan (PRD 7.10/E2) + pengingat lokal (F2).
-4. Pengatur waktu istirahat (D2 Should) di layar sesi.
-5. Uji perangkat Android nyata (APK EAS Build), crash-free ≥ 99%.
+Fase 1–5 + v1.1 selesai. Berikutnya:
+1. **Rombak UI/UX** — sesuaikan tampilan dan interaksi.
+2. **Uji Android nyata** — `eas build --profile preview --platform android` (butuh akun EAS).
+3. Data makanan: 1,337 item (TKPI 2020). Target ±500 sudah terlampaui.
 
 ## Catatan
 
 - `AGENTS.md` mewajibkan typecheck + lint sebelum menyatakan tugas selesai.
 - Uji UI memakai `testMatch` `__tests__/**/*.test.ts`; test `.tsx` belum dikonfigurasi.
 - Belum ada `ios/`/`android/`; jangan dibuat manual (CNG).
+- `eas.json` ada 3 profil: development, preview (APK), production.
+- `src/db/migrations.ts`: framework `PRAGMA user_version`, siap pakai untuk migration kolom.
+- `src/notifications.ts`: pengingat lokal via `expo-notifications`, no-op di web.
