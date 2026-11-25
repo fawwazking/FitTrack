@@ -38,10 +38,12 @@ Diperbarui setiap akhir sesi:
 
 ## Langkah berikutnya
 
-1. Fase 3: layar makanan harian (4 waktu makan), cari/tambah makanan, makanan custom, salin hari.
-2. Fase 4: program + sesi latihan (set, RPE, saran overload, PR, ringkasan sesi).
-3. Fase 5: catat berat + grafik tren, pengingat lokal, pengaturan notifikasi.
-4. Sebelum rilis: migrasi kolom, impor data makanan resmi, uji perangkat Android nyata.
+Fase 1–5 selesai. Berikutnya (sesuai PRD v1.1 / keputusan ditunda):
+1. Migrasi kolom bernomor (`PRAGMA user_version`) sebelum rilis pertama.
+2. Impor data makanan resmi (TKPI/label) — seed ±184 item, di bawah target ±500.
+3. Modul evaluasi mingguan (PRD 7.10/E2) + pengingat lokal (F2).
+4. Pengatur waktu istirahat (D2 Should) di layar sesi.
+5. Uji perangkat Android nyata (APK EAS Build), crash-free ≥ 99%.
 
 ## Catatan
 
