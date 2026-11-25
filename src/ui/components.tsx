@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
+import { isWeb } from '../db/db';
 import {
   ActivityIndicator,
   Modal,
@@ -167,6 +168,18 @@ export function Card({
     gap: theme.spacing.md,
   };
   if (onPress) {
+    if (isWeb) {
+      // ponytail: use div+role instead of button on web to avoid nested <button>
+      // (react-native-web renders Pressable as <button>; upgrade: custom web Card
+      // with onClick when we need proper focus/keyboard semantics)
+      return (
+        <View style={[cardStyle, style, { cursor: 'pointer' }]}>
+          <View style={{ flex: 1, gap: theme.spacing.md }}>
+            {children}
+          </View>
+        </View>
+      );
+    }
     return (
       <Pressable
         accessibilityRole="button"
