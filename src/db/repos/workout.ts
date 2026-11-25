@@ -512,7 +512,21 @@ export function updateProgramDayExercise(
   id: string,
   patch: Partial<Pick<ProgramDayExerciseRow, 'targetSets' | 'repMin' | 'repMax' | 'restSeconds' | 'orderIndex'>>,
 ): void {
-  if (isWeb) return;
+  if (isWeb) {
+    const programs = getWebPrograms();
+    for (const program of programs) {
+      for (const day of program.days) {
+        for (const ex of day.exercises) {
+          if (ex.id === id) {
+            Object.assign(ex, patch);
+            localStorage.setItem(WEB_PROGRAMS_KEY, JSON.stringify(programs));
+            return;
+          }
+        }
+      }
+    }
+    return;
+  }
   getDb()
     .update(programDayExercise)
     .set({ ...patch, updatedAt: nowISO() })
@@ -521,7 +535,32 @@ export function updateProgramDayExercise(
 }
 
 export function addProgramDayExercise(dayId: string, exerciseId: string): string {
-  if (isWeb) return `web-pde-${Date.now()}`;
+  if (isWeb) {
+    const programs = getWebPrograms();
+    for (const program of programs) {
+      for (const day of program.days) {
+        if (day.id === dayId) {
+          const ex = SEED_EXERCISES.find((s) => `seed-ex-${day.exercises.length}-${s.name}` === exerciseId);
+          if (ex) {
+            const isCompound = ex.isCompound;
+            day.exercises.push({
+              id: `web-pde-${Date.now()}`,
+              exerciseId,
+              name: ex.name,
+              targetSets: isCompound ? WORKOUT_DEFAULTS.compoundSets : WORKOUT_DEFAULTS.isolationSets,
+              repMin: ex.repMin,
+              repMax: ex.repMax,
+              restSeconds: isCompound ? WORKOUT_DEFAULTS.restCompoundSeconds : WORKOUT_DEFAULTS.restIsolationSeconds,
+              orderIndex: day.exercises.length,
+            });
+            localStorage.setItem(WEB_PROGRAMS_KEY, JSON.stringify(programs));
+          }
+          return day.exercises[day.exercises.length - 1]?.id ?? `web-pde-${Date.now()}`;
+        }
+      }
+    }
+    return `web-pde-${Date.now()}`;
+  }
   const db = getDb();
   const now = nowISO();
   const ex = getExercise(exerciseId);
@@ -552,7 +591,21 @@ export function addProgramDayExercise(dayId: string, exerciseId: string): string
 }
 
 export function removeProgramDayExercise(id: string): void {
-  if (isWeb) return;
+  if (isWeb) {
+    const programs = getWebPrograms();
+    for (const program of programs) {
+      for (const day of program.days) {
+        const idx = day.exercises.findIndex((ex) => ex.id === id);
+        if (idx !== -1) {
+          day.exercises.splice(idx, 1);
+          day.exercises.forEach((ex, i) => { ex.orderIndex = i; });
+          localStorage.setItem(WEB_PROGRAMS_KEY, JSON.stringify(programs));
+          return;
+        }
+      }
+    }
+    return;
+  }
   const now = nowISO();
   getDb()
     .update(programDayExercise)
@@ -562,7 +615,24 @@ export function removeProgramDayExercise(id: string): void {
 }
 
 export function addProgramDay(programId: string, name: string, weekday: number | null = null): string {
-  if (isWeb) return `web-pday-${Date.now()}`;
+  if (isWeb) {
+    const programs = getWebPrograms();
+    const program = programs.find((p) => p.id === programId);
+    if (program) {
+      const newDayId = `web-pday-${Date.now()}`;
+      program.days.push({
+        id: newDayId,
+        name,
+        weekday: weekday ?? 0,
+        orderIndex: program.days.length,
+        exercises: [],
+      });
+      program.updatedAt = nowISO();
+      localStorage.setItem(WEB_PROGRAMS_KEY, JSON.stringify(programs));
+      return newDayId;
+    }
+    return `web-pday-${Date.now()}`;
+  }
   const db = getDb();
   const now = nowISO();
   const last = db
@@ -592,7 +662,21 @@ export function updateProgramDay(
   id: string,
   patch: Partial<Pick<ProgramDayRow, 'name' | 'weekday'>>,
 ): void {
-  if (isWeb) return;
+  if (isWeb) {
+    const programs = getWebPrograms();
+    for (const program of programs) {
+      for (const day of program.days) {
+        if (day.id === id) {
+          if (patch.name !== undefined) day.name = patch.name;
+          if (patch.weekday !== undefined) day.weekday = patch.weekday ?? 0;
+          program.updatedAt = nowISO();
+          localStorage.setItem(WEB_PROGRAMS_KEY, JSON.stringify(programs));
+          return;
+        }
+      }
+    }
+    return;
+  }
   getDb().update(programDay).set({ ...patch, updatedAt: nowISO() }).where(eq(programDay.id, id)).run();
 }
 
