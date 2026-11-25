@@ -334,6 +334,16 @@ export function setActiveProgram(programId: string): void {
 }
 
 export function renameProgram(programId: string, name: string): void {
+  if (isWeb) {
+    const programs = getWebPrograms();
+    const program = programs.find((p) => p.id === programId);
+    if (program) {
+      program.name = name.trim();
+      program.updatedAt = nowISO();
+      localStorage.setItem(WEB_PROGRAMS_KEY, JSON.stringify(programs));
+    }
+    return;
+  }
   getDb()
     .update(workoutProgram)
     .set({ name: name.trim(), updatedAt: nowISO() })
@@ -342,7 +352,12 @@ export function renameProgram(programId: string, name: string): void {
 }
 
 export function deleteProgram(programId: string): void {
-  if (isWeb) return;
+  if (isWeb) {
+    const programs = getWebPrograms().filter((p) => p.id !== programId);
+    localStorage.setItem(WEB_PROGRAMS_KEY, JSON.stringify(programs));
+    if (getWebActiveProgram() === programId) localStorage.removeItem(WEB_ACTIVE_KEY);
+    return;
+  }
   const db = getDb();
   const now = nowISO();
   getSqlite().withTransactionSync(() => {
@@ -364,7 +379,24 @@ export function deleteProgram(programId: string): void {
 }
 
 export function duplicateProgram(programId: string): string | null {
-  if (isWeb) return null;
+  if (isWeb) {
+    const detail = getWebProgramDetail(programId);
+    if (!detail) return null;
+    const newId = `web-program-${Date.now()}`;
+    const programs = getWebPrograms();
+    const program = programs.find((p) => p.id === programId);
+    if (program) {
+      const copy: WebProgramData = JSON.parse(JSON.stringify(program));
+      copy.id = newId;
+      copy.name = `${program.name} (salinan)`;
+      copy.isActive = false;
+      copy.createdAt = nowISO();
+      copy.updatedAt = nowISO();
+      programs.push(copy);
+      localStorage.setItem(WEB_PROGRAMS_KEY, JSON.stringify(programs));
+    }
+    return newId;
+  }
   const detail = getProgramDetail(programId);
   if (!detail) return null;
   const db = getDb();
@@ -597,6 +629,7 @@ export function startSession(options: { date?: string; programDayId?: string | n
 }
 
 export function addExerciseToSession(sessionId: string, exerciseId: string): string {
+  if (isWeb) return `web-se-${Date.now()}`;
   const db = getDb();
   const now = nowISO();
   const ex = getExercise(exerciseId);
@@ -627,6 +660,7 @@ export function addExerciseToSession(sessionId: string, exerciseId: string): str
 }
 
 export function removeSessionExercise(id: string): void {
+  if (isWeb) return;
   const db = getDb();
   const now = nowISO();
   getSqlite().withTransactionSync(() => {
@@ -636,6 +670,24 @@ export function removeSessionExercise(id: string): void {
 }
 
 export function getSessionDetail(sessionId: string): SessionDetail | null {
+  if (isWeb) {
+    return {
+      session: {
+        id: sessionId,
+        createdAt: nowISO(),
+        updatedAt: nowISO(),
+        deletedAt: null,
+        date: todayISO(),
+        programDayId: null,
+        programDayName: null,
+        startedAt: nowISO(),
+        endedAt: null,
+        status: 'active',
+        note: null,
+      },
+      exercises: [],
+    };
+  }
   const db = getDb();
   const session = db
     .select()
@@ -732,6 +784,7 @@ function countE1rmStalls(history: PastSession[]): number {
 }
 
 export function getPastExerciseSessions(exerciseId: string, limit = 10): PastSession[] {
+  if (isWeb) return [];
   const sessions = getSqlite().getAllSync<{ id: string; date: string; started_at: string }>(
     `SELECT ws.id, ws.date, ws.started_at
      FROM workout_session ws
@@ -776,6 +829,7 @@ function mapSetRow(row: Record<string, unknown>): SetLogRow {
 }
 
 function loadExerciseSets(exerciseId: string): SetLogRow[] {
+  if (isWeb) return [];
   return getSqlite()
     .getAllSync<Record<string, unknown>>(
       `SELECT sl.* FROM set_log sl
@@ -792,6 +846,10 @@ export function addSet(
   sessionExerciseId: string,
   input: { weightKg: number; reps: number; rpe?: number | null; isWarmup?: boolean },
 ): { id: string; prs: PrType[]; e1rmKg: number | null } | null {
+  if (isWeb) {
+    const e1rmKg = input.isWarmup ? null : epley1Rm(input.weightKg, input.reps);
+    return { id: `web-set-${Date.now()}`, prs: [], e1rmKg };
+  }
   const db = getDb();
   const row = db
     .select()
@@ -851,6 +909,7 @@ export function addSet(
 }
 
 export function deleteSet(id: string): void {
+  if (isWeb) return;
   const now = nowISO();
   getDb().update(setLog).set({ deletedAt: now, updatedAt: now }).where(eq(setLog.id, id)).run();
 }
@@ -865,6 +924,7 @@ export function finishSession(sessionId: string, note?: string | null): void {
 }
 
 export function getSessionSummary(sessionId: string): SessionSummary | null {
+  if (isWeb) return null;
   const db = getDb();
   const session = db
     .select()
