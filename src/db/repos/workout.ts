@@ -612,7 +612,12 @@ export function getTodayProgramDay(date = todayISO()): { program: WorkoutProgram
 }
 
 export function getProgramDayExerciseCount(dayId: string): number {
-  if (isWeb) return 0;
+  if (isWeb) {
+    const detail = getActiveProgramDetail();
+    if (!detail) return 0;
+    const day = detail.days.find((item) => item.row.id === dayId);
+    return day?.exercises.length ?? 0;
+  }
   const row = getSqlite().getFirstSync<{ n: number }>(
     `SELECT COUNT(*) AS n FROM program_day_exercise
      WHERE program_day_id = ? AND deleted_at IS NULL`,
