@@ -4,6 +4,9 @@ import { getDb, isWeb, newId, nowISO } from '../db';
 import { weightLog, type WeightLogRow } from '../schema';
 
 export function upsertWeight(date: string, weightKg: number, note?: string | null): WeightLogRow {
+  if (isWeb) {
+    return { id: 'web-weight', createdAt: nowISO(), updatedAt: nowISO(), deletedAt: null, date, weightKg, note: note ?? null };
+  }
   const db = getDb();
   const now = nowISO();
   const existing = db.select().from(weightLog).where(eq(weightLog.date, date)).get();

@@ -140,6 +140,7 @@ function insertServing(foodId: string, label: string, grams: number): void {
 }
 
 export function createCustomFood(input: CustomFoodInput): string {
+  if (isWeb) return 'web-food';
   const db = getDb();
   const now = nowISO();
   const id = newId();
@@ -233,6 +234,7 @@ export function addMealEntry(input: {
   quantity?: number;
   servingId?: string | null;
 }): MealEntryRow | null {
+  if (isWeb) return null;
   const row = getFood(input.foodId);
   if (!row) return null;
   const per100g: NutritionPer100g = {

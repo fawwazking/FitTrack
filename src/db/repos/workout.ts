@@ -149,6 +149,7 @@ export function createProgramFromTemplate(
   sessionsPerWeek: number,
   options: { name?: string; activate?: boolean } = {},
 ): string | null {
+  if (isWeb) return null;
   const template = templateForFrequency(sessionsPerWeek);
   if (template.days.length === 0) return null;
 
@@ -299,6 +300,7 @@ export function getActiveProgramDetail(): ProgramDetail | null {
 }
 
 export function setActiveProgram(programId: string): void {
+  if (isWeb) return;
   const now = nowISO();
   const db = getDb();
   db.update(workoutProgram).set({ isActive: 0, updatedAt: now }).where(eq(workoutProgram.isActive, 1)).run();
@@ -315,6 +317,7 @@ export function renameProgram(programId: string, name: string): void {
 }
 
 export function deleteProgram(programId: string): void {
+  if (isWeb) return;
   const db = getDb();
   const now = nowISO();
   getSqlite().withTransactionSync(() => {
@@ -336,6 +339,7 @@ export function deleteProgram(programId: string): void {
 }
 
 export function duplicateProgram(programId: string): string | null {
+  if (isWeb) return null;
   const detail = getProgramDetail(programId);
   if (!detail) return null;
   const db = getDb();
@@ -385,6 +389,7 @@ export function updateProgramDayExercise(
   id: string,
   patch: Partial<Pick<ProgramDayExerciseRow, 'targetSets' | 'repMin' | 'repMax' | 'restSeconds' | 'orderIndex'>>,
 ): void {
+  if (isWeb) return;
   getDb()
     .update(programDayExercise)
     .set({ ...patch, updatedAt: nowISO() })
@@ -461,6 +466,7 @@ export function updateProgramDay(
   id: string,
   patch: Partial<Pick<ProgramDayRow, 'name' | 'weekday'>>,
 ): void {
+  if (isWeb) return;
   getDb().update(programDay).set({ ...patch, updatedAt: nowISO() }).where(eq(programDay.id, id)).run();
 }
 
@@ -497,6 +503,7 @@ export function getActiveSession(): WorkoutSessionRow | null {
 }
 
 export function startSession(options: { date?: string; programDayId?: string | null } = {}): string {
+  if (isWeb) return 'web-session';
   const existing = getActiveSession();
   if (existing) return existing.id;
   const db = getDb();
@@ -818,6 +825,7 @@ export function deleteSet(id: string): void {
 }
 
 export function finishSession(sessionId: string, note?: string | null): void {
+  if (isWeb) return;
   getDb()
     .update(workoutSession)
     .set({ status: 'done', endedAt: nowISO(), note: note ?? null, updatedAt: nowISO() })

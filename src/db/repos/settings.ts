@@ -31,6 +31,7 @@ export function getSettings(): AppSettingsRow {
 }
 
 export function updateSettings(patch: Partial<Pick<AppSettingsRow, 'theme' | 'notificationsEnabled' | 'weekStartDay'>>): void {
+  if (isWeb) return;
   getSettings();
   getDb()
     .update(appSettings)
@@ -72,6 +73,7 @@ export function updateReminder(
 }
 
 export function resetApplication(): void {
+  if (isWeb) return;
   resetAllData();
   getSqlite();
   seedDatabase();

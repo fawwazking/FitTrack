@@ -104,7 +104,18 @@ export function getTargetForDate(goalId: string, date: string): NutritionTargetR
 }
 
 export function getProfileBundle(date = todayISO()): ProfileBundle | null {
-  if (isWeb) return null;
+  if (isWeb) {
+    // ponytail: no SQLite on web; use localStorage to persist onboarding state.
+    // Add a proper web DB layer (IndexedDB) when persistence is needed.
+    try {
+      const raw = localStorage.getItem('fittrack-profile');
+      if (!raw) return null;
+      const saved = JSON.parse(raw) as ProfileBundle;
+      return saved;
+    } catch {
+      return null;
+    }
+  }
   const profile = getProfileRow();
   if (!profile) return null;
   const goal = getActiveGoal(profile.id);
@@ -141,6 +152,16 @@ function insertTarget(input: {
   goal: Goal;
   reason: 'onboarding' | 'weight_change' | 'goal_change' | 'weekly_review' | 'manual';
 }): NutritionTargetRow {
+  if (isWeb) {
+    return {
+      id: 'web-target', createdAt: nowISO(), updatedAt: nowISO(), deletedAt: null,
+      goalSettingId: input.goalSettingId, effectiveDate: input.date,
+      bmr: input.computed.result.bmr, tdee: input.computed.result.tdee,
+      calories: input.computed.result.calories,
+      proteinG: input.computed.macros.proteinG, carbsG: input.computed.macros.carbsG, fatG: input.computed.macros.fatG,
+      proteinGPerKg: PROTEIN_G_PER_KG[input.goal], fatPct: FAT_DEFAULT_PCT, reason: input.reason,
+    };
+  }
   const db = getDb();
   const now = nowISO();
   const row: NutritionTargetRow = {
@@ -165,6 +186,58 @@ function insertTarget(input: {
 }
 
 export function saveOnboarding(input: OnboardingInput): { profileId: string; goalId: string; targetId: string } {
+  if (isWeb) {
+    // ponytail: no SQLite on web; persist via localStorage. Add IndexedDB later.
+    const computed = computeTarget(input, input.goal, input.pace);
+    const bundle: ProfileBundle = {
+      profile: {
+        id: 'web-profile',
+        createdAt: nowISO(),
+        updatedAt: nowISO(),
+        deletedAt: null,
+        sex: input.sex,
+        birthDate: birthDateFromAge(input.age),
+        heightCm: input.heightCm,
+        activityLevel: input.activityLevel,
+        sessionsPerWeek: input.sessionsPerWeek,
+        units: 'metric',
+        weekStartDay: 1,
+        disclaimerAcceptedAt: input.disclaimerAcceptedAt,
+      },
+      goal: {
+        id: 'web-goal',
+        createdAt: nowISO(),
+        updatedAt: nowISO(),
+        deletedAt: null,
+        profileId: 'web-profile',
+        goal: input.goal,
+        pace: input.pace,
+        startDate: todayISO(),
+        referenceWeightKg: input.weightKg,
+        manualOverride: 0,
+      },
+      target: {
+        id: 'web-target',
+        createdAt: nowISO(),
+        updatedAt: nowISO(),
+        deletedAt: null,
+        goalSettingId: 'web-goal',
+        effectiveDate: todayISO(),
+        bmr: computed.result.bmr,
+        tdee: computed.result.tdee,
+        calories: computed.result.calories,
+        proteinG: computed.macros.proteinG,
+        carbsG: computed.macros.carbsG,
+        fatG: computed.macros.fatG,
+        proteinGPerKg: PROTEIN_G_PER_KG[input.goal],
+        fatPct: FAT_DEFAULT_PCT,
+        reason: 'onboarding',
+      },
+      latestWeightKg: input.weightKg,
+    };
+    localStorage.setItem('fittrack-profile', JSON.stringify(bundle));
+    return { profileId: 'web-profile', goalId: 'web-goal', targetId: 'web-target' };
+  }
   const db = getDb();
   const now = nowISO();
   const today = todayISO();
@@ -224,6 +297,7 @@ export function saveOnboarding(input: OnboardingInput): { profileId: string; goa
 }
 
 export function updateProfile(input: ProfileFormValues): NutritionTargetRow | null {
+  if (isWeb) return null;
   const bundle = getProfileBundle();
   if (!bundle) return null;
   const db = getDb();
@@ -274,6 +348,7 @@ export function updateProfile(input: ProfileFormValues): NutritionTargetRow | nu
 }
 
 export function updateGoalAndTarget(goal: Goal, pace: Pace): NutritionTargetRow | null {
+  if (isWeb) return null;
   const bundle = getProfileBundle();
   if (!bundle) return null;
   const db = getDb();
@@ -310,6 +385,7 @@ export function updateGoalAndTarget(goal: Goal, pace: Pace): NutritionTargetRow 
 }
 
 export function setManualTarget(calories: number): NutritionTargetRow | null {
+  if (isWeb) return null;
   const bundle = getProfileBundle();
   if (!bundle) return null;
   const db = getDb();
@@ -413,6 +489,7 @@ export function getRecalculationSuggestion(): RecalculationSuggestion | null {
 }
 
 export function acceptRecalculation(): NutritionTargetRow | null {
+  if (isWeb) return null;
   const suggestion = getRecalculationSuggestion();
   if (!suggestion) return null;
   const db = getDb();
@@ -436,6 +513,7 @@ export function acceptRecalculation(): NutritionTargetRow | null {
 }
 
 export function rejectRecalculation(): void {
+  if (isWeb) return;
   const latest = getLatestWeight();
   setMeta(REJECT_META_DATE, todayISO());
   setMeta(REJECT_META_WEIGHT, String(latest?.weightKg ?? 0));
