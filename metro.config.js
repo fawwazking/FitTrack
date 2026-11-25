@@ -6,4 +6,8 @@ const config = getDefaultConfig(__dirname);
 // extensions as source by default. Tell it to bundle as an asset instead.
 config.resolver.assetExts.push("wasm");
 
+// @expo-google-fonts ships .ttf files inside node_modules sub-packages.
+// Metro's default sourceExts don't cover .ttf; tell it to treat as asset.
+config.resolver.assetExts.push("ttf");
+
 module.exports = config;

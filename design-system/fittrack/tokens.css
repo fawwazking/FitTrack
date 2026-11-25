@@ -1,0 +1,59 @@
+/* FitTrack Design Tokens — Soft-Minimalism Reference (2026-11-26) */
+/* Primary: violet #5C5CE7 / Secondary: orange #F5A623 / Success: green #10B981 */
+/* Source of truth: src/ui/theme.ts */
+
+:root {
+  --color-bg: #F4F4F5;
+  --color-bg-dark: #0F1016;
+  --color-surface: #FFFFFF;
+  --color-surface-dark: #171824;
+  --color-surfaceAlt: #F1F1F4;
+  --color-surfaceAlt-dark: #1E2030;
+  --color-text: #1A1A1A;
+  --color-text-dark: #F4F4F5;
+  --color-textMuted: #71717A;
+  --color-textMuted-dark: #A1A1AA;
+  --color-border: #E4E4E7;
+  --color-border-dark: #2A2C3C;
+  --color-primary: #5C5CE7;
+  --color-primary-dark: #7C7CF5;
+  --color-primaryText: #FFFFFF;
+  --color-primaryText-dark: #FFFFFF;
+  --color-primarySoft: #EDEDFE;
+  --color-primarySoft-dark: #23244A;
+  --color-danger: #DC2626;
+  --color-danger-dark: #F87171;
+  --color-dangerSoft: #FEE2E2;
+  --color-dangerSoft-dark: #3B1717;
+  --color-warning: #F5A623;
+  --color-warning-dark: #FBBF24;
+  --color-warningSoft: #FEF3C7;
+  --color-warningSoft-dark: #3A2A10;
+  --color-success: #10B981;
+  --color-success-dark: #34D399;
+  --color-protein: #5C5CE7;
+  --color-protein-dark: #A5A5F7;
+  --color-carbs: #F5A623;
+  --color-carbs-dark: #FBBF24;
+  --color-fat: #10B981;
+  --color-fat-dark: #34D399;
+  --color-track: #E2E8F0;
+  --color-track-dark: #2A2C3C;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --font-h1: 30px;
+  --font-h2: 20px;
+  --font-h3: 17px;
+  --font-body: 15px;
+  --font-small: 13px;
+  --font-label: 12px;
+  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+}

@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
-import { useTheme, type Theme } from './theme';
+import { useTheme, FONT_FAMILY, type Theme } from './theme';
 
 export type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -43,27 +43,24 @@ export function Txt({
 }) {
   const theme = useTheme();
   const base = useMemo<TextStyle>(() => {
-    switch (variant) {
-      case 'h1':
-        return { fontSize: theme.font.h1, fontWeight: '700', lineHeight: theme.font.h1 * 1.2 };
-      case 'h2':
-        return { fontSize: theme.font.h2, fontWeight: '700', lineHeight: theme.font.h2 * 1.25 };
-      case 'h3':
-        return { fontSize: theme.font.h3, fontWeight: '600', lineHeight: theme.font.h3 * 1.3 };
-      case 'label':
-        return {
-          fontSize: theme.font.label,
-          fontWeight: '700',
-          letterSpacing: 0.5,
-          textTransform: 'uppercase',
-        };
-      case 'caption':
-        return { fontSize: theme.font.label, fontWeight: '500' };
-      case 'small':
-        return { fontSize: theme.font.small, lineHeight: theme.font.small * 1.4 };
-      default:
-        return { fontSize: theme.font.body, lineHeight: theme.font.body * 1.45 };
-    }
+    const fontMap: Record<TextVariant, { size: number; weight: TextStyle['fontWeight']; family: string }> = {
+      h1: { size: theme.font.h1, weight: '700', family: FONT_FAMILY.bold },
+      h2: { size: theme.font.h2, weight: '700', family: FONT_FAMILY.semiBold },
+      h3: { size: theme.font.h3, weight: '600', family: FONT_FAMILY.semiBold },
+      label: { size: theme.font.label, weight: '700', family: FONT_FAMILY.bold },
+      caption: { size: theme.font.label, weight: '500', family: FONT_FAMILY.medium },
+      small: { size: theme.font.small, weight: '400', family: FONT_FAMILY.regular },
+      body: { size: theme.font.body, weight: '400', family: FONT_FAMILY.regular },
+    };
+    const v = fontMap[variant] ?? fontMap.body;
+    const lineHeight = variant === 'body' ? v.size * 1.45 : variant === 'small' ? v.size * 1.4 : v.size * 1.25;
+    return {
+      fontSize: v.size,
+      fontWeight: v.weight,
+      fontFamily: v.family,
+      lineHeight,
+      ...(variant === 'label' ? { letterSpacing: 0.5, textTransform: 'uppercase' as const } : {}),
+    };
   }, [variant, theme]);
   return (
     <Text
