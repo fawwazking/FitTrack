@@ -6,6 +6,7 @@ import { getSettings } from '../db/repos/settings';
 import { getSqlite, isWeb } from '../db/db';
 import { seedDatabase } from '../db/seed';
 import { t } from '../i18n';
+import { initNotifications } from '../notifications';
 import { useUi, type ThemeMode } from '../state/ui';
 import { Banner, Screen } from '../ui/components';
 import { useTheme } from '../ui/theme';
@@ -43,6 +44,8 @@ export default function RootLayout() {
 
   useEffect(() => {
     setThemeMode(init.themeMode);
+    // Initialize notification handler (no-op on web)
+    initNotifications();
   }, [init.themeMode, setThemeMode]);
 
   return (

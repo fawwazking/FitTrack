@@ -9,11 +9,9 @@ export const isWeb = Platform.OS === 'web';
 
 let sqlite: SQLiteDatabase | null = null;
 let orm: ReturnType<typeof drizzle<typeof schema>> | null = null;
-let webMode = false;
 
 export function getSqlite(): SQLiteDatabase {
   if (isWeb) {
-    webMode = true;
     // ponytail: no SQLite on web; return an empty object cast. Add an IndexedDB
     // layer when persistence is needed on web.
     return {} as SQLiteDatabase;

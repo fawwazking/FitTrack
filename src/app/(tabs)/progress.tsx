@@ -11,8 +11,9 @@ import {
   upsertWeight,
 } from '../../db/repos/weight';
 import { getPrEvents } from '../../db/repos/workout';
+import { runWeeklyEval } from '../../db/repos/weekly';
+import { addDaysISO, startOfWeekISO, todayISO } from '../../domain/dates';
 import type { WeightLogRow } from '../../db/schema';
-import { addDaysISO, todayISO } from '../../domain/dates';
 import { bmi } from '../../domain/nutrition';
 import { formatDate, formatKg, formatNumber, t } from '../../i18n';
 import { useUi } from '../../state/ui';
@@ -92,6 +93,74 @@ function WeightChart({ rows }: { rows: WeightLogRow[] }) {
         {t.progress.trendNote}
       </Txt>
     </View>
+  );
+}
+
+function WeeklyEvalCard({ weekStart, onDecision }: { weekStart: string; onDecision: () => void }) {
+  const theme = useTheme();
+  const result = useState(() => runWeeklyEval(weekStart))[0];
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  if (result.action === 'insufficient_data') {
+    return (
+      <Card>
+        <Txt variant="small" color={theme.colors.textMuted}>
+          {t.progress.weeklyEvalInsufficient}
+        </Txt>
+      </Card>
+    );
+  }
+
+  const tone =
+    result.action === 'on_track' ? 'success' : result.action === 'add_kcal' || result.action === 'reduce_kcal' ? 'warning' : 'info';
+  const actionLabel =
+    result.action === 'on_track'
+      ? t.progress.weeklyEvalOnTrack
+      : result.action === 'add_kcal'
+        ? `${t.progress.weeklyEvalAddKcal} ${Math.abs(result.adjustmentKcal)} kcal`
+        : result.action === 'reduce_kcal'
+          ? `${t.progress.weeklyEvalReduceKcal} ${Math.abs(result.adjustmentKcal)} kcal`
+          : t.progress.weeklyEvalImprove;
+
+  return (
+    <Card>
+      <Row>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Badge label={actionLabel} tone={tone as any} />
+          <Txt variant="small">{result.reason}</Txt>
+          <Txt variant="caption" color={theme.colors.textMuted}>
+            {t.progress.weeklyEvalRate}: {(result.weeklyRate * 100).toFixed(1)}%
+          </Txt>
+        </View>
+        {result.action !== 'on_track' ? (
+          <View style={{ gap: theme.spacing.sm }}>
+            <Button
+              title={t.progress.weeklyEvalAccept}
+              small
+              fullWidth={false}
+              onPress={() => {
+                setFeedback(t.progress.weeklyEvalAccepted);
+                onDecision();
+              }}
+            />
+            <Button
+              title={t.progress.weeklyEvalReject}
+              small
+              variant="secondary"
+              fullWidth={false}
+              onPress={() => {
+                setFeedback(t.progress.weeklyEvalRejected);
+              }}
+            />
+          </View>
+        ) : null}
+      </Row>
+      {feedback ? (
+        <Txt variant="caption" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm }}>
+          {feedback}
+        </Txt>
+      ) : null}
+    </Card>
   );
 }
 
@@ -266,6 +335,10 @@ export default function ProgressScreen() {
             ))
           )}
         </Card>
+      </Section>
+
+      <Section title={t.progress.weeklyEval}>
+        <WeeklyEvalCard weekStart={startOfWeekISO(today)} onDecision={bump} />
       </Section>
 
       <AppModal

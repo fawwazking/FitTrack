@@ -1,15 +1,20 @@
 import { MEAL_TYPES, REMINDER_DEFAULTS } from '../config';
 import { SEED_EXERCISES } from '../data/exercises';
 import { SEED_FOODS } from '../data/foods';
-import { countRows, getSqlite, newId, normalizeSearch, nowISO } from './db';
+import { countRows, getSqlite, isWeb, newId, normalizeSearch, nowISO } from './db';
+import { runMigrations } from './migrations';
 
 export const SEED_VERSION = '1';
 
 const ALL_DAYS = JSON.stringify([0, 1, 2, 3, 4, 5, 6]);
 
 export function seedDatabase(): void {
+  if (isWeb) return;
   const db = getSqlite();
   const now = nowISO();
+
+  // Run pending migrations before seeding
+  runMigrations();
 
   db.runSync(
     `INSERT OR IGNORE INTO app_settings
