@@ -96,6 +96,29 @@ export interface ExerciseStat {
 }
 
 export function listExercises(query = '', limit = 80): ExerciseRow[] {
+  if (isWeb) {
+    const normalized = normalizeSearch(query);
+    const filtered = SEED_EXERCISES.filter((ex) => {
+      if (!normalized) return true;
+      return ex.name.toLowerCase().includes(normalized) || ex.nameEn.toLowerCase().includes(normalized);
+    });
+    return filtered.slice(0, limit).map((ex, i) => ({
+      id: `seed-ex-${i}-${ex.name}`,
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
+      deletedAt: null,
+      name: ex.name,
+      nameEn: ex.nameEn,
+      muscleGroup: ex.muscleGroup,
+      equipment: ex.equipment,
+      defaultRepMin: ex.repMin,
+      defaultRepMax: ex.repMax,
+      incrementKg: ex.incrementKg,
+      isCustom: 0,
+      isCompound: ex.isCompound ? 1 : 0,
+      searchText: `${ex.name} ${ex.nameEn}`.toLowerCase(),
+    }));
+  }
   const rows = getDb()
     .select()
     .from(exercise)
@@ -108,6 +131,27 @@ export function listExercises(query = '', limit = 80): ExerciseRow[] {
 }
 
 export function getExercise(id: string): ExerciseRow | null {
+  if (isWeb) {
+    const idx = parseInt(id.replace('seed-ex-', '').split('-')[0] || '0', 10);
+    const ex = SEED_EXERCISES[idx];
+    if (!ex) return null;
+    return {
+      id: `seed-ex-${idx}-${ex.name}`,
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
+      deletedAt: null,
+      name: ex.name,
+      nameEn: ex.nameEn,
+      muscleGroup: ex.muscleGroup,
+      equipment: ex.equipment,
+      defaultRepMin: ex.repMin,
+      defaultRepMax: ex.repMax,
+      incrementKg: ex.incrementKg,
+      isCustom: 0,
+      isCompound: ex.isCompound ? 1 : 0,
+      searchText: `${ex.name} ${ex.nameEn}`.toLowerCase(),
+    };
+  }
   return (
     getDb()
       .select()
@@ -122,6 +166,24 @@ export function createCustomExercise(input: {
   muscleGroup: string;
   equipment: string;
 }): ExerciseRow {
+  if (isWeb) {
+    return {
+      id: `custom-ex-${Date.now()}`,
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
+      deletedAt: null,
+      name: input.name,
+      nameEn: input.name,
+      muscleGroup: input.muscleGroup,
+      equipment: input.equipment,
+      defaultRepMin: 8,
+      defaultRepMax: 12,
+      incrementKg: 2,
+      isCustom: 1,
+      isCompound: 0,
+      searchText: input.name.toLowerCase(),
+    };
+  }
   const now = nowISO();
   const row: ExerciseRow = {
     id: newId(),
@@ -229,6 +291,7 @@ export function createProgramFromTemplate(
 }
 
 export function getActiveProgramId(): string | null {
+  if (isWeb) return getWebActiveProgram();
   const settings = getDb()
     .select()
     .from(appSettings)
@@ -267,6 +330,9 @@ export function listPrograms(): WorkoutProgramRow[] {
 }
 
 export function getProgramDetail(programId: string): ProgramDetail | null {
+  if (isWeb) {
+    return getWebProgramDetail(programId);
+  }
   const db = getDb();
   const program = db
     .select()
@@ -455,6 +521,7 @@ export function updateProgramDayExercise(
 }
 
 export function addProgramDayExercise(dayId: string, exerciseId: string): string {
+  if (isWeb) return `web-pde-${Date.now()}`;
   const db = getDb();
   const now = nowISO();
   const ex = getExercise(exerciseId);
@@ -485,6 +552,7 @@ export function addProgramDayExercise(dayId: string, exerciseId: string): string
 }
 
 export function removeProgramDayExercise(id: string): void {
+  if (isWeb) return;
   const now = nowISO();
   getDb()
     .update(programDayExercise)
@@ -494,6 +562,7 @@ export function removeProgramDayExercise(id: string): void {
 }
 
 export function addProgramDay(programId: string, name: string, weekday: number | null = null): string {
+  if (isWeb) return `web-pday-${Date.now()}`;
   const db = getDb();
   const now = nowISO();
   const last = db
@@ -1086,6 +1155,7 @@ export function listSessions(limit = 40): {
 }
 
 export function deleteSession(sessionId: string): void {
+  if (isWeb) return;
   const db = getDb();
   const now = nowISO();
   getSqlite().withTransactionSync(() => {
