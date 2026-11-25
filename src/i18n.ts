@@ -214,6 +214,7 @@ export const t = {
     recent: 'Terakhir',
     allFoods: 'Semua',
     customTab: 'Saya',
+    quickPick: 'Pilih cepat',
     createFood: 'Buat makanan baru',
     createRecipe: 'Buat dari resep',
     name: 'Nama makanan',

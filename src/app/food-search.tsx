@@ -9,6 +9,8 @@ import {
   getServings,
   searchFoods,
 } from '../db/repos/food';
+import { webSearchFoods } from '../db/repos/food-search';
+import { isWeb } from '../db/db';
 import type { FoodRow } from '../db/schema';
 import { todayISO } from '../domain/dates';
 import {
@@ -47,6 +49,24 @@ const MODES = [
 ] as const;
 
 type Mode = (typeof MODES)[number]['key'];
+
+/** Suggested foods shown as quick-pick chips when search is empty. */
+const SUGGESTION_KEYWORDS = isWeb
+  ? [
+      'Nasi',
+      'Ayam',
+      'Tempe',
+      'Telur',
+      'Sapi',
+      'Ikan',
+      'Susu',
+      'Roti',
+      'Mie',
+      'Sayur',
+      'Buah',
+      'Kopi',
+    ]
+  : [];
 
 interface ServingOption {
   id: string;
@@ -101,7 +121,32 @@ export default function FoodSearchScreen() {
   const [ingredients, setIngredients] = useState<{ food: FoodRow; grams: number }[]>([]);
   const [ingQuery, setIngQuery] = useState('');
 
-  const results = useQuery(() => searchFoods(query, mode, 40), [query, mode]);
+  const results = useQuery(
+    () => {
+      if (isWeb) {
+        // Web mode: search from bundled seed data (no DB)
+        return webSearchFoods(query, mode, 40).map((row) => ({
+          id: row.id,
+          name: row.name,
+          brand: null,
+          source: 'builtin',
+          category: row.category,
+          kcal100g: row.kcal100g,
+          protein100g: row.protein100g,
+          carbs100g: row.carbs100g,
+          fat100g: row.fat100g,
+          isCustom: 0,
+          verified: 0,
+          searchText: row.name,
+          createdAt: '',
+          updatedAt: '',
+          deletedAt: null,
+        }));
+      }
+      return searchFoods(query, mode, 40);
+    },
+    [query, mode],
+  );
   const servings = useQuery(
     () => (selected ? getServings(selected.id) : []),
     [selected?.id ?? ''],
@@ -245,6 +290,25 @@ export default function FoodSearchScreen() {
           />
         ))}
       </Row>
+
+      {/* Quick-pick suggestions when no active search */}
+      {!query.trim() && SUGGESTION_KEYWORDS.length > 0 && (
+        <>
+          <Txt variant="small" style={{ color: theme.colors.textMuted, marginTop: theme.spacing.md }}>
+            {t.food.quickPick}
+          </Txt>
+          <Row gap={8} style={{ flexWrap: 'wrap' }}>
+            {SUGGESTION_KEYWORDS.map((kw) => (
+              <Chip
+                key={kw}
+                label={kw}
+                onPress={() => setQuery(kw)}
+              />
+            ))}
+          </Row>
+          <Divider />
+        </>
+      )}
 
       {(results.data ?? []).length === 0 ? (
         <EmptyState icon="search-outline" title={t.food.noResults} body={t.food.noResultsHint} />
