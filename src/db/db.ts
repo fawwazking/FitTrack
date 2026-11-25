@@ -1,13 +1,23 @@
 import * as Crypto from 'expo-crypto';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync, type SQLiteDatabase } from 'expo-sqlite';
+import { Platform } from 'react-native';
 import * as schema from './schema';
 import { INIT_SQL } from './sql';
 
+export const isWeb = Platform.OS === 'web';
+
 let sqlite: SQLiteDatabase | null = null;
 let orm: ReturnType<typeof drizzle<typeof schema>> | null = null;
+let webMode = false;
 
 export function getSqlite(): SQLiteDatabase {
+  if (isWeb) {
+    webMode = true;
+    // ponytail: no SQLite on web; return an empty object cast. Add an IndexedDB
+    // layer when persistence is needed on web.
+    return {} as SQLiteDatabase;
+  }
   if (!sqlite) {
     sqlite = openDatabaseSync('fittrack.db');
     sqlite.execSync('PRAGMA journal_mode = WAL;');
@@ -18,6 +28,15 @@ export function getSqlite(): SQLiteDatabase {
 }
 
 export function getDb() {
+  if (isWeb) {
+    // ponytail: drizzle has no web driver; return a no-op proxy so repos
+    // don't crash. Add a web DB layer when persistence is needed.
+    return new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
+      get: () => () => {
+        throw new Error('Web DB not available');
+      },
+    });
+  }
   if (!orm) {
     orm = drizzle(getSqlite(), { schema });
   }

@@ -11,7 +11,7 @@ import { computeCalorieTarget, computeMacros } from '../../domain/nutrition';
 import type { CalorieTargetResult, MacroResult } from '../../domain/types';
 import { addDaysISO, parseLocalDate, toLocalDateISO, todayISO } from '../../domain/dates';
 import type { ProfileFormValues } from '../../validation';
-import { getDb, getMeta, newId, nowISO, setMeta } from '../db';
+import { getDb, getMeta, isWeb, newId, nowISO, setMeta } from '../db';
 import {
   goalSetting,
   nutritionTarget,
@@ -62,6 +62,7 @@ export function hasProfile(): boolean {
 }
 
 export function getProfileRow(): UserProfileRow | null {
+  if (isWeb) return null;
   const row = getDb()
     .select()
     .from(userProfile)
@@ -73,6 +74,7 @@ export function getProfileRow(): UserProfileRow | null {
 }
 
 export function getActiveGoal(profileId: string): GoalSettingRow | null {
+  if (isWeb) return null;
   const row = getDb()
     .select()
     .from(goalSetting)
@@ -84,6 +86,7 @@ export function getActiveGoal(profileId: string): GoalSettingRow | null {
 }
 
 export function getTargetForDate(goalId: string, date: string): NutritionTargetRow | null {
+  if (isWeb) return null;
   const row = getDb()
     .select()
     .from(nutritionTarget)
@@ -101,6 +104,7 @@ export function getTargetForDate(goalId: string, date: string): NutritionTargetR
 }
 
 export function getProfileBundle(date = todayISO()): ProfileBundle | null {
+  if (isWeb) return null;
   const profile = getProfileRow();
   if (!profile) return null;
   const goal = getActiveGoal(profile.id);
@@ -377,6 +381,7 @@ export interface RecalculationSuggestion {
  * PRD 7.5.
  */
 export function getRecalculationSuggestion(): RecalculationSuggestion | null {
+  if (isWeb) return null;
   const bundle = getProfileBundle();
   if (!bundle) return null;
   const latest = getLatestWeight();

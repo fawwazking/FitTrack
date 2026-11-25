@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { getSettings } from '../db/repos/settings';
-import { getSqlite } from '../db/db';
+import { getSqlite, isWeb } from '../db/db';
 import { seedDatabase } from '../db/seed';
 import { t } from '../i18n';
 import { useUi, type ThemeMode } from '../state/ui';
@@ -21,6 +21,12 @@ interface InitResult {
 
 export default function RootLayout() {
   const [init] = useState<InitResult>(() => {
+    // ponytail: expo-sqlite web build (worker + .wasm) doesn't bundle cleanly
+    // with Metro; skip native DB on web. Add a web DB layer when persistence
+    // is needed (IndexedDB or SQL.js).
+    if (isWeb) {
+      return { error: null, themeMode: 'system' };
+    }
     try {
       getSqlite();
       seedDatabase();

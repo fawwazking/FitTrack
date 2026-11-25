@@ -1,9 +1,16 @@
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { seedDatabase } from '../seed';
-import { getDb, getSqlite, nowISO, resetAllData } from '../db';
+import { getDb, getSqlite, isWeb, nowISO, resetAllData } from '../db';
 import { appSettings, reminder, type AppSettingsRow, type ReminderRow } from '../schema';
 
 export function getSettings(): AppSettingsRow {
+  if (isWeb) {
+    return {
+      id: 'app', createdAt: nowISO(), updatedAt: nowISO(), deletedAt: null,
+      theme: 'system', language: 'id', weekStartDay: 1,
+      notificationsEnabled: 0, activeProgramId: null,
+    };
+  }
   const db = getDb();
   const row = db.select().from(appSettings).where(eq(appSettings.id, 'app')).get();
   if (row) return row;
@@ -33,6 +40,7 @@ export function updateSettings(patch: Partial<Pick<AppSettingsRow, 'theme' | 'no
 }
 
 export function listReminders(): ReminderRow[] {
+  if (isWeb) return [];
   return getDb()
     .select()
     .from(reminder)
@@ -42,6 +50,7 @@ export function listReminders(): ReminderRow[] {
 }
 
 export function getReminderFor(type: string, mealType?: string | null): ReminderRow | null {
+  if (isWeb) return null;
   const rows = getDb()
     .select()
     .from(reminder)

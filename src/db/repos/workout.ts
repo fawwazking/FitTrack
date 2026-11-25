@@ -10,7 +10,7 @@ import {
   workSets,
 } from '../../domain/progression';
 import { defaultRestForExercise, defaultSetsForExercise, templateForFrequency } from '../../data/templates';
-import { getDb, getSqlite, newId, nowISO, normalizeSearch } from '../db';
+import { getDb, getSqlite, isWeb, newId, nowISO, normalizeSearch } from '../db';
 import {
   exercise,
   programDay,
@@ -238,6 +238,7 @@ export function getActiveProgramId(): string | null {
 }
 
 export function listPrograms(): WorkoutProgramRow[] {
+  if (isWeb) return [];
   return getDb()
     .select()
     .from(workoutProgram)
@@ -292,6 +293,7 @@ export function getProgramDetail(programId: string): ProgramDetail | null {
 }
 
 export function getActiveProgramDetail(): ProgramDetail | null {
+  if (isWeb) return null;
   const id = getActiveProgramId();
   return id ? getProgramDetail(id) : null;
 }
@@ -463,6 +465,7 @@ export function updateProgramDay(
 }
 
 export function getTodayProgramDay(date = todayISO()): { program: WorkoutProgramRow; day: ProgramDayRow } | null {
+  if (isWeb) return null;
   const detail = getActiveProgramDetail();
   if (!detail) return null;
   const target = weekdayIndex(date);
@@ -471,6 +474,7 @@ export function getTodayProgramDay(date = todayISO()): { program: WorkoutProgram
 }
 
 export function getProgramDayExerciseCount(dayId: string): number {
+  if (isWeb) return 0;
   const row = getSqlite().getFirstSync<{ n: number }>(
     `SELECT COUNT(*) AS n FROM program_day_exercise
      WHERE program_day_id = ? AND deleted_at IS NULL`,
@@ -480,6 +484,7 @@ export function getProgramDayExerciseCount(dayId: string): number {
 }
 
 export function getActiveSession(): WorkoutSessionRow | null {
+  if (isWeb) return null;
   return (
     getDb()
       .select()
@@ -856,6 +861,7 @@ export function getSessionSummary(sessionId: string): SessionSummary | null {
 }
 
 export function getPrEvents(options: { sinceDate?: string } = {}): PrEvent[] {
+  if (isWeb) return [];
   const all = getSqlite().getAllSync<{
     id: string;
     exercise_id: string;
@@ -947,6 +953,7 @@ export function listSessions(limit = 40): {
   totalVolume: number;
   totalSets: number;
 }[] {
+  if (isWeb) return [];
   const db = getDb();
   const sessions = db
     .select()

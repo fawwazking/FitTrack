@@ -7,7 +7,7 @@ import {
   type Nutrition,
   type NutritionPer100g,
 } from '../../domain/food';
-import { getDb, getSqlite, newId, nowISO, normalizeSearch } from '../db';
+import { getDb, getSqlite, isWeb, newId, nowISO, normalizeSearch } from '../db';
 import {
   food,
   foodServing,
@@ -56,6 +56,7 @@ export function searchFoods(
   mode: 'frequent' | 'recent' | 'all' | 'custom' = 'all',
   limit = 40,
 ): FoodRow[] {
+  if (isWeb) return [];
   const db = getDb();
   const normalized = normalizeSearch(query);
 
@@ -95,6 +96,7 @@ export function searchFoods(
 }
 
 export function getFood(id: string): FoodRow | null {
+  if (isWeb) return null;
   return (
     getDb()
       .select()
@@ -105,6 +107,7 @@ export function getFood(id: string): FoodRow | null {
 }
 
 export function getServings(foodId: string): FoodServingRow[] {
+  if (isWeb) return [];
   return getDb()
     .select()
     .from(foodServing)
@@ -262,6 +265,7 @@ export function addMealEntry(input: {
 }
 
 export function listMealEntries(date: string): MealEntryRow[] {
+  if (isWeb) return [];
   return getDb()
     .select()
     .from(mealEntry)
@@ -301,6 +305,7 @@ export function getDayTotals(date: string): DayTotals {
 }
 
 export function getRangeDayTotals(startDate: string, endDate: string): { date: string; totals: DayTotals }[] {
+  if (isWeb) return [];
   const rows = getSqlite().getAllSync<{
     date: string;
     kcal: number;
@@ -363,6 +368,7 @@ export function copyDay(fromDate: string, toDate: string, mealType?: MealType): 
 }
 
 export function recentFoods(days = 30, limit = 20): FoodRow[] {
+  if (isWeb) return [];
   const since = addDaysISO(todayISO(), -days);
   const ids = getSqlite().getAllSync<{ food_id: string }>(
     `SELECT m.food_id, MAX(m.created_at) AS last_used

@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gt, isNull, lte } from 'drizzle-orm';
 import { addDaysISO, todayISO } from '../../domain/dates';
-import { getDb, newId, nowISO } from '../db';
+import { getDb, isWeb, newId, nowISO } from '../db';
 import { weightLog, type WeightLogRow } from '../schema';
 
 export function upsertWeight(date: string, weightKg: number, note?: string | null): WeightLogRow {
@@ -28,6 +28,7 @@ export function upsertWeight(date: string, weightKg: number, note?: string | nul
 }
 
 export function getLatestWeight(): WeightLogRow | null {
+  if (isWeb) return null;
   const row = getDb()
     .select()
     .from(weightLog)
@@ -39,6 +40,7 @@ export function getLatestWeight(): WeightLogRow | null {
 }
 
 export function getWeightForDate(date: string): WeightLogRow | null {
+  if (isWeb) return null;
   const row = getDb()
     .select()
     .from(weightLog)
@@ -48,6 +50,7 @@ export function getWeightForDate(date: string): WeightLogRow | null {
 }
 
 export function listWeights(limit = 120): WeightLogRow[] {
+  if (isWeb) return [];
   return getDb()
     .select()
     .from(weightLog)
@@ -58,6 +61,7 @@ export function listWeights(limit = 120): WeightLogRow[] {
 }
 
 export function listWeightsBetween(startDate: string, endDate: string): WeightLogRow[] {
+  if (isWeb) return [];
   return getDb()
     .select()
     .from(weightLog)
@@ -73,6 +77,7 @@ export function listWeightsBetween(startDate: string, endDate: string): WeightLo
 }
 
 export function getWeightAverage(endDate: string, windowDays = 7): number | null {
+  if (isWeb) return null;
   const rows = listWeightsBetween(addDaysISO(endDate, -(windowDays - 1)), endDate);
   if (rows.length === 0) return null;
   return rows.reduce((sum, row) => sum + row.weightKg, 0) / rows.length;
