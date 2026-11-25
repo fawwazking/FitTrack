@@ -1,4 +1,4 @@
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useCanGoBack } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 import {
@@ -142,13 +142,21 @@ export default function ProgramEditorScreen() {
   const [pickerDay, setPickerDay] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
-  const detail = useQuery(() => getProgramDetail(programId), [programId]);
+  const detail = useQuery(() => (programId ? getProgramDetail(programId) : null), [programId]);
   const results = useQuery(() => (pickerDay ? listExercises(query, 30) : []), [query, pickerDay]);
+
+  const canGo = useCanGoBack();
+
+  const goBack = () => {
+    if (canGo) router.back();
+    else router.replace('/(tabs)/workout');
+  };
 
   if (detail.loading && !detail.data) return <LoadingView />;
   if (detail.error || !detail.data) {
     return (
       <Screen>
+        <Header title={t.errors.notFound} onBack={goBack} />
         <Banner tone="danger" title={t.errors.notFound}>
           {detail.error ?? t.errors.notFound}
         </Banner>
@@ -164,7 +172,7 @@ export default function ProgramEditorScreen() {
       <Header
         title={t.workout.editProgram}
         subtitle={program.template}
-        onBack={() => router.back()}
+        onBack={goBack}
         right={
           <IconButton
             name="checkmark"
@@ -173,7 +181,7 @@ export default function ProgramEditorScreen() {
               if (name.trim()) renameProgram(program.id, name);
               setNameDraft(null);
               bump();
-              router.back();
+              goBack();
             }}
           />
         }

@@ -1,4 +1,4 @@
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useCanGoBack } from 'expo-router';
 import { View } from 'react-native';
 import { getExercise, getExerciseStats } from '../db/repos/workout';
 import { formatDate, formatNumber, t } from '../i18n';
@@ -22,6 +22,7 @@ export default function ExerciseDetailScreen() {
   const theme = useTheme();
   const params = useLocalSearchParams<{ id?: string }>();
   const exerciseId = typeof params.id === 'string' ? params.id : '';
+  const canGo = useCanGoBack();
 
   const data = useQuery(() => {
     if (!exerciseId) return null;
@@ -30,11 +31,16 @@ export default function ExerciseDetailScreen() {
     return { exercise, stats: getExerciseStats(exerciseId) };
   }, [exerciseId]);
 
+  const goBack = () => {
+    if (canGo) router.back();
+    else router.replace('/(tabs)/workout');
+  };
+
   if (data.loading && !data.data) return <LoadingView />;
   if (data.error || !data.data) {
     return (
       <Screen>
-        <Header title={t.workout.exerciseDetail} onBack={() => router.back()} />
+        <Header title={t.workout.exerciseDetail} onBack={goBack} />
         <Banner tone="danger" title={t.errors.notFound}>
           {data.error ?? t.errors.notFound}
         </Banner>
@@ -51,7 +57,7 @@ export default function ExerciseDetailScreen() {
       <Header
         title={exercise.name}
         subtitle={`${exercise.muscleGroup} · ${exercise.equipment}`}
-        onBack={() => router.back()}
+        onBack={goBack}
       />
 
       <Card>

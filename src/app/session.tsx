@@ -1,4 +1,4 @@
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useCanGoBack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 import {
@@ -241,6 +241,7 @@ export default function ActiveSessionScreen() {
   const bump = useUi((state) => state.bump);
   const params = useLocalSearchParams<{ id?: string }>();
   const paramId = typeof params.id === 'string' ? params.id : '';
+  const canGo = useCanGoBack();
 
   const [restLeft, setRestLeft] = useState(0);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -258,6 +259,11 @@ export default function ActiveSessionScreen() {
     [pickerOpen, query],
   );
 
+  const goBack = () => {
+    if (canGo) router.back();
+    else router.replace('/(tabs)/workout');
+  };
+
   useEffect(() => {
     const timer = setInterval(() => {
       setNowMs(Date.now());
@@ -270,7 +276,7 @@ export default function ActiveSessionScreen() {
   if (detail.error || !detail.data) {
     return (
       <Screen>
-        <Header title={t.workout.activeSession} onBack={() => router.back()} />
+        <Header title={t.workout.activeSession} onBack={goBack} />
         <Banner tone="danger" title={t.errors.notFound}>
           {detail.error ?? t.errors.notFound}
         </Banner>
@@ -302,7 +308,7 @@ export default function ActiveSessionScreen() {
       <Header
         title={session.programDayName ?? t.workout.activeSession}
         subtitle={`${formatDate(session.date)} · ${formatDuration(elapsedSec)}`}
-        onBack={() => router.back()}
+        onBack={goBack}
         right={
           <Button
             title={t.workout.finishSessionShort}
