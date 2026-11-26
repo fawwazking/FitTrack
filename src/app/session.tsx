@@ -1,6 +1,6 @@
 import { useLocalSearchParams, router, useCanGoBack } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import {
   addExerciseToSession,
   addSet,
@@ -32,6 +32,7 @@ import {
   Row,
   Screen,
   Txt,
+  useConfirm,
 } from '../ui/components';
 import { useTheme } from '../ui/theme';
 import { useQuery } from '../ui/useQuery';
@@ -239,6 +240,7 @@ function ExerciseCard({
 export default function ActiveSessionScreen() {
   const theme = useTheme();
   const bump = useUi((state) => state.bump);
+  const confirm = useConfirm();
   const params = useLocalSearchParams<{ id?: string }>();
   const paramId = typeof params.id === 'string' ? params.id : '';
   const canGo = useCanGoBack();
@@ -291,17 +293,15 @@ export default function ActiveSessionScreen() {
   );
 
   const onFinish = () =>
-    Alert.alert(t.workout.finishConfirm, undefined, [
-      { text: t.common.cancel, style: 'cancel' },
-      {
-        text: t.workout.finishSession,
-        onPress: () => {
-          finishSession(session.id);
-          bump();
-          router.replace({ pathname: '/session-summary', params: { id: session.id } });
-        },
+    confirm.show({
+      title: t.workout.finishConfirm,
+      confirmLabel: t.workout.finishSession,
+      onConfirm: () => {
+        finishSession(session.id);
+        bump();
+        router.replace({ pathname: '/session-summary', params: { id: session.id } });
       },
-    ]);
+    });
 
   return (
     <Screen>
@@ -413,6 +413,8 @@ export default function ActiveSessionScreen() {
           </Card>
         ))}
       </AppModal>
+
+      {confirm.element}
     </Screen>
   );
 }

@@ -1,6 +1,6 @@
 import { useLocalSearchParams, router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import { MEAL_TYPES, type MealType } from '../config';
 import {
   addMealEntry,
@@ -36,6 +36,7 @@ import {
   Row,
   Screen,
   Txt,
+  useConfirm,
 } from '../ui/components';
 import { useTheme } from '../ui/theme';
 import { useQuery } from '../ui/useQuery';
@@ -100,6 +101,7 @@ const EMPTY_FORM = {
 export default function FoodSearchScreen() {
   const theme = useTheme();
   const bump = useUi((state) => state.bump);
+  const confirm = useConfirm();
   const params = useLocalSearchParams<{ date?: string; meal?: string }>();
   const date = typeof params.date === 'string' && params.date ? params.date : todayISO();
   const meal: MealType =
@@ -230,10 +232,11 @@ export default function FoodSearchScreen() {
     if (
       !isCalorieConsistent(values.kcal100g, values.protein100g, values.carbs100g, values.fat100g)
     ) {
-      Alert.alert(t.food.kcalWarning, undefined, [
-        { text: t.common.cancel, style: 'cancel' },
-        { text: t.common.yes, onPress: save },
-      ]);
+      confirm.show({
+        title: t.food.kcalWarning,
+        confirmLabel: t.common.yes,
+        onConfirm: save,
+      });
       return;
     }
     save();
@@ -606,6 +609,8 @@ export default function FoodSearchScreen() {
           {t.food.estimateNote}
         </Txt>
       </AppModal>
+
+      {confirm.element}
     </Screen>
   );
 }

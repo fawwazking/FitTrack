@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import Svg, { Circle, Polyline } from 'react-native-svg';
 import { getProfileBundle } from '../../db/repos/profile';
 import {
@@ -34,6 +34,7 @@ import {
   Section,
   Stat,
   Txt,
+  useConfirm,
 } from '../../ui/components';
 import { useTheme } from '../../ui/theme';
 import { useQuery } from '../../ui/useQuery';
@@ -167,6 +168,7 @@ function WeeklyEvalCard({ weekStart, onDecision }: { weekStart: string; onDecisi
 export default function ProgressScreen() {
   const theme = useTheme();
   const bump = useUi((state) => state.bump);
+  const confirm = useConfirm();
   const today = todayISO();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -226,10 +228,11 @@ export default function ProgressScreen() {
       bump();
     };
     if (getWeightToday()) {
-      Alert.alert(t.progress.overwriteConfirm, undefined, [
-        { text: t.common.cancel, style: 'cancel' },
-        { text: t.common.save, onPress: commit },
-      ]);
+      confirm.show({
+        title: t.progress.overwriteConfirm,
+        confirmLabel: t.common.save,
+        onConfirm: commit,
+      });
       return;
     }
     commit();
@@ -367,6 +370,8 @@ export default function ProgressScreen() {
           </Banner>
         ) : null}
       </AppModal>
+
+      {confirm.element}
     </Screen>
   );
 }

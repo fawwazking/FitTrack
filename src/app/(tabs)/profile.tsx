@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import {
   ACTIVITY_LEVELS,
   PACES,
@@ -52,6 +52,7 @@ import {
   Stat,
   Stepper,
   Txt,
+  useConfirm,
 } from '../../ui/components';
 import { useTheme } from '../../ui/theme';
 import { useQuery } from '../../ui/useQuery';
@@ -79,6 +80,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const bump = useUi((state) => state.bump);
   const setThemeMode = useUi((state) => state.setThemeMode);
+  const confirm = useConfirm();
 
   const bundleQuery = useQuery(() => getProfileBundle(), []);
   const historyQuery = useQuery(() => getTargetHistory(8), []);
@@ -261,19 +263,18 @@ export default function ProfileScreen() {
   };
 
   const resetApp = () => {
-    Alert.alert(t.settings.resetApp, t.settings.resetConfirm, [
-      { text: t.common.cancel, style: 'cancel' },
-      {
-        text: t.common.delete,
-        style: 'destructive',
-        onPress: () => {
-          resetApplication();
-          setThemeMode('system');
-          bump();
-          router.replace('/onboarding');
-        },
+    confirm.show({
+      title: t.settings.resetApp,
+      message: t.settings.resetConfirm,
+      confirmLabel: t.common.delete,
+      destructive: true,
+      onConfirm: () => {
+        resetApplication();
+        setThemeMode('system');
+        bump();
+        router.replace('/onboarding');
       },
-    ]);
+    });
   };
 
   const history = historyQuery.data ?? [];
@@ -736,6 +737,8 @@ export default function ProfileScreen() {
           {t.profile.manualHint}
         </Txt>
       </AppModal>
+
+      {confirm.element}
     </Screen>
   );
 }

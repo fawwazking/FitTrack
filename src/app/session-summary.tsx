@@ -1,5 +1,5 @@
 import { useLocalSearchParams, router, useCanGoBack } from 'expo-router';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import { deleteSession, getSessionSummary } from '../db/repos/workout';
 import { formatDate, formatDuration, formatNumber, t } from '../i18n';
 import { useUi } from '../state/ui';
@@ -17,6 +17,7 @@ import {
   Section,
   Stat,
   Txt,
+  useConfirm,
 } from '../ui/components';
 import { useTheme } from '../ui/theme';
 import { useQuery } from '../ui/useQuery';
@@ -24,6 +25,7 @@ import { useQuery } from '../ui/useQuery';
 export default function SessionSummaryScreen() {
   const theme = useTheme();
   const bump = useUi((state) => state.bump);
+  const confirm = useConfirm();
   const params = useLocalSearchParams<{ id?: string }>();
   const sessionId = typeof params.id === 'string' ? params.id : '';
   const canGo = useCanGoBack();
@@ -50,18 +52,16 @@ export default function SessionSummaryScreen() {
   const { session, totalVolume, totalWorkingSets, durationSeconds, prs } = summary.data;
 
   const confirmDelete = () =>
-    Alert.alert(t.workout.deleteSessionConfirm, undefined, [
-      { text: t.common.cancel, style: 'cancel' },
-      {
-        text: t.common.delete,
-        style: 'destructive',
-        onPress: () => {
-          deleteSession(session.id);
-          bump();
-          router.replace('/(tabs)/workout');
-        },
+    confirm.show({
+      title: t.workout.deleteSessionConfirm,
+      confirmLabel: t.common.delete,
+      destructive: true,
+      onConfirm: () => {
+        deleteSession(session.id);
+        bump();
+        router.replace('/(tabs)/workout');
       },
-    ]);
+    });
 
   return (
     <Screen>
@@ -112,6 +112,8 @@ export default function SessionSummaryScreen() {
       </Section>
 
       <Button title={t.common.done} onPress={() => router.replace('/(tabs)/workout')} />
+
+      {confirm.element}
     </Screen>
   );
 }

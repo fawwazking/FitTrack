@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import type { MealType } from '../../config';
 import {
   copyDay,
@@ -29,6 +29,7 @@ import {
   Screen,
   Section,
   Txt,
+  useConfirm,
 } from '../../ui/components';
 import { useTheme } from '../../ui/theme';
 import { useQuery } from '../../ui/useQuery';
@@ -36,6 +37,7 @@ import { useQuery } from '../../ui/useQuery';
 export default function FoodScreen() {
   const theme = useTheme();
   const bump = useUi((state) => state.bump);
+  const confirm = useConfirm();
   const [date, setDate] = useState(todayISO());
   const [copyOpen, setCopyOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
@@ -88,23 +90,21 @@ export default function FoodScreen() {
     router.push({ pathname: '/food-search', params: { date, meal: mealType } });
 
   const removeEntry = (id: string) =>
-    Alert.alert(t.food.deleteConfirm, undefined, [
-      { text: t.common.cancel, style: 'cancel' },
-      {
-        text: t.common.delete,
-        style: 'destructive',
-        onPress: () => {
-          deleteMealEntry(id);
-          bump();
-        },
+    confirm.show({
+      title: t.food.deleteConfirm,
+      confirmLabel: t.common.delete,
+      destructive: true,
+      onConfirm: () => {
+        deleteMealEntry(id);
+        bump();
       },
-    ]);
+    });
 
   const doCopy = (from: string) => {
     const copied = copyDay(from, date);
     setCopyOpen(false);
     bump();
-    if (copied === 0) Alert.alert(t.common.noData, t.food.emptyDay);
+    if (copied === 0) confirm.show({ title: t.common.noData, message: t.food.emptyDay });
   };
 
   return (
@@ -314,6 +314,8 @@ export default function FoodScreen() {
           ))
         )}
       </AppModal>
+
+      {confirm.element}
     </Screen>
   );
 }

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { isWeb } from '../db/db';
 import {
   ActivityIndicator,
@@ -19,6 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { useTheme, FONT_FAMILY, type Theme } from './theme';
+import { t } from '../i18n';
 
 export type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -918,6 +919,69 @@ export function LoadingView() {
 
 export function colorForMacro(theme: Theme, key: 'protein' | 'carbs' | 'fat'): string {
   return theme.colors[key];
+}
+
+/**
+ * Web-safe confirm dialog. React Native's `Alert.alert` is a NO-OP on web
+ * (react-native-web does not implement it), so every delete/reset/overwrite
+ * confirm that used `Alert.alert` silently does nothing in a browser.
+ * This component works on both web and native.
+ *
+ * Usage:
+ *   const confirm = useConfirm();
+ *   confirm.show({ title, message, confirmLabel, destructive, onConfirm });
+ *   ... render {confirm.element} inside your screen.
+ */
+export function useConfirm() {
+  const theme = useTheme();
+  const [state, setState] = useState<{
+    open: boolean;
+    title: string;
+    message?: string;
+    confirmLabel?: string;
+    destructive?: boolean;
+    onConfirm?: () => void;
+  }>({ open: false, title: '' });
+
+  const show = (opts: {
+    title: string;
+    message?: string;
+    confirmLabel?: string;
+    destructive?: boolean;
+    onConfirm?: () => void;
+  }) => setState({ open: true, ...opts });
+
+  const close = () => setState((s) => ({ ...s, open: false }));
+
+  const element = (
+    <AppModal
+      visible={state.open}
+      title={state.title}
+      onClose={close}
+      footer={
+        <Row gap={8}>
+          <Button title={t.common.cancel} variant="secondary" fullWidth={false} onPress={close} />
+          <Button
+            title={state.confirmLabel ?? t.common.confirm}
+            variant={state.destructive ? 'danger' : 'primary'}
+            fullWidth={false}
+            onPress={() => {
+              state.onConfirm?.();
+              close();
+            }}
+          />
+        </Row>
+      }
+    >
+      {state.message ? (
+        <Txt variant="small" color={theme.colors.textMuted}>
+          {state.message}
+        </Txt>
+      ) : null}
+    </AppModal>
+  );
+
+  return { show, element };
 }
 
 const styles = StyleSheet.create({

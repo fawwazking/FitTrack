@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import {
   createProgramFromTemplate,
   deleteProgram,
@@ -32,6 +32,7 @@ import {
   Screen,
   Section,
   Txt,
+  useConfirm,
 } from '../../ui/components';
 import { useTheme } from '../../ui/theme';
 import { useQuery } from '../../ui/useQuery';
@@ -39,6 +40,7 @@ import { useQuery } from '../../ui/useQuery';
 export default function WorkoutScreen() {
   const theme = useTheme();
   const bump = useUi((state) => state.bump);
+  const confirm = useConfirm();
 
   const data = useQuery(
     () => ({
@@ -75,7 +77,7 @@ export default function WorkoutScreen() {
   const newProgram = () => {
     const created = createProgramFromTemplate(view.profile?.sessionsPerWeek ?? 3);
     if (!created) {
-      Alert.alert(t.workout.noPrograms, t.workout.templateHint);
+      confirm.show({ title: t.workout.noPrograms, message: t.workout.templateHint });
       return;
     }
     bump();
@@ -83,17 +85,16 @@ export default function WorkoutScreen() {
   };
 
   const confirmDelete = (programId: string) =>
-    Alert.alert(t.common.delete, t.workout.finishConfirm, [
-      { text: t.common.cancel, style: 'cancel' },
-      {
-        text: t.common.delete,
-        style: 'destructive',
-        onPress: () => {
-          deleteProgram(programId);
-          bump();
-        },
+    confirm.show({
+      title: t.common.delete,
+      message: t.workout.finishConfirm,
+      confirmLabel: t.common.delete,
+      destructive: true,
+      onConfirm: () => {
+        deleteProgram(programId);
+        bump();
       },
-    ]);
+    });
 
   return (
     <Screen>
@@ -334,6 +335,7 @@ export default function WorkoutScreen() {
           );
         })()}
       </Section>
+      {confirm.element}
     </Screen>
   );
 }
