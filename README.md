@@ -48,7 +48,7 @@ src/
 ├── state/          # Zustand UI state
 └── ui/             # Theme tokens and reusable UI components
 __tests__/          # Unit tests for domain logic and seed data integrity
-docs/               # Product requirements, progress notes, and screenshots
+docs/               # Progress notes and screenshots
 ```
 
 ## Getting Started

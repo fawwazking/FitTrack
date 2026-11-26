@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# local docs / agent instructions
+AGENTS.md
+docs/PRD.md
